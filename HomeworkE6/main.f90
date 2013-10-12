@@ -5,7 +5,6 @@ program hello
     implicit none
 
     type(Planform) :: planform1
-    planform1%WingType = Elliptic
 
     !Begin execution loop
     call MainPage(planform1)
