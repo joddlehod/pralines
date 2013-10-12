@@ -1,5 +1,6 @@
 module iofunctions
     use class_Planform
+    use liftinglinesolver
     implicit none
 
 contains
@@ -21,14 +22,14 @@ contains
             write(6, '(4x, a, a, a)') "W - Edit wing type ( ", &
                 & trim(GetWingType(pf)), " )"
             write(6, '(4x, a, i3, a)') "N - Edit number of nodes per semispan (", &
-                & pf%NodesPerSemispan, " )"
+                & (pf%NNodes + 1) / 2, " )"
             write(6, '(4x, a, f7.4, a)') "A - Edit aspect ratio (", &
                 & pf%AspectRatio, " )"
             if (pf%WingType == Tapered) then
                 write(6, '(4x, a, f7.4, a)') "T - Edit taper ratio (", &
                     & pf%TaperRatio, " )"
             end if
-            write(6, '(4x, a, f10.7, a)') "S - Edit section lift slope (", &
+            write(6, '(4x, a, f11.7, a)') "S - Edit section lift slope (", &
                 & pf%LiftSlope, " )"
             write(6, '(4x, a, a, a)') "O - Edit output file name ( ", &
                 & trim(pf%FileName), " )"
@@ -42,19 +43,18 @@ contains
                 & pf%WriteCInverse, " )"
             write(6, '(4x, a, l1, a)') "F - Toggle output of Fourier Coefficients ( ", &
                 & pf%WriteFourier, " )"
-            write(6, '(4x, a, a, l1, a)') "K - Toggle output of KL, KD, and ", &
-                & " section lift slope ( ", pf%WriteOther, " )"
+            write(6, '(4x, a, a, l1, a)') "K - Toggle output of KL, KD, es, ", &
+                & "and section lift slope ( ", pf%WriteOther, " )"
 
             ! Main Execution commands
             write(6, *)
             write(6, '(2x, a)') "R - Run Simulation"
             write(6, '(2x, a)') "Q - Quit"
 
-            read(5, '(a)') input
-            if(iachar(input) >= iachar('a') .AND. iachar(input) <= iachar('z')) then
-                input = char(iachar(input) - 32)
-            end if
+            write(6, *)
+            write(6, '(a)') "Your selection: "
 
+            input = GetCharInput()
             cont = MainPageResponse(pf, input)
         end do
     end subroutine MainPage
@@ -69,19 +69,19 @@ contains
         ! Process input command
         ! Input parameters
         if (input == 'W') then
-!            call EditWingType(pf)
+            call EditWingType(pf)
         else if (input == 'N') then
-!            call EditNodes(pf)
+            call EditNodes(pf)
         else if (input == 'A') then
-!            call EditAspectRatio(pf)
+            call EditAspectRatio(pf)
         else if (input == 'T' .and. pf%WingType == Tapered) then
-!            call EditTaperRatio(pf)
+            call EditTaperRatio(pf)
         else if (input == 'S') then
-!            call EditLiftSlope(pf)
+            call EditLiftSlope(pf)
         else if (input == 'O') then
-!            call EditFileName(pf)
+            call EditFileName(pf)
 
-            ! Output options
+        ! Output options
         else if (input == 'C') then
             pf%WriteCMatrix = .not. pf%WriteCMatrix
         else if (input == 'I') then
@@ -91,12 +91,111 @@ contains
         else if (input == 'K') then
             pf%WriteOther = .not. pf%WriteOther
 
-            ! Main Execution Commands
+        ! Main Execution Commands
         else if (input == 'R') then
-!            call RunSimulation(pf)
+            call RunSimulation(pf)
+            call system('pause')
         else if (input == 'Q') then
             cont = .false.
         end if
     end function MainPageResponse
+
+    subroutine EditWingType(pf)
+        type(Planform), intent(inout) :: pf
+
+        character :: input
+
+        write(6, *)
+        write(6, '(a)') "Select wing type:"
+        write(6, '(2x, a)') "T - Tapered"
+        write(6, '(2x, a)') "E - Elliptic"
+
+        write(6, *)
+        write(6, '(a)') "Your selection: "
+
+        input = GetCharInput()
+
+        if (input == 'T') then
+            pf%WingType = Tapered
+        else if (input == 'E') then
+            pf%WingType = Elliptic
+        end if
+
+    end subroutine EditWingType
+
+    subroutine EditNodes(pf)
+        type(Planform), intent(inout) :: pf
+
+        integer :: nnodes
+
+        write(6, *)
+        write(6, '(a)') "Enter number of nodes per semispan:"
+
+        nnodes = GetIntInput()
+        if (nnodes > 0) then
+            pf%NNodes = nnodes * 2 - 1
+        end if
+    end subroutine EditNodes
+
+    subroutine EditAspectRatio(pf)
+        type(Planform), intent(inout) :: pf
+
+        real*8 :: aratio
+
+        write(6, *)
+        write(6, '(a)') "Enter aspect ratio:"
+
+        aratio = GetRealInput()
+        if (aratio > 0.0) then
+            pf%AspectRatio = aratio
+        end if
+    end subroutine EditAspectRatio
+
+    subroutine EditTaperRatio(pf)
+        type(Planform), intent(inout) :: pf
+
+        real*8 :: tratio
+
+        write(6, *)
+        write(6, '(a)') "Enter taper ratio:"
+
+        tratio = GetRealInput()
+        if (tratio >= 0.0) then
+            pf%TaperRatio = tratio
+        end if
+    end subroutine EditTaperRatio
+
+    subroutine EditLiftSlope(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter lift slope:"
+
+        pf%LiftSlope = GetRealInput()
+    end subroutine EditLiftSlope
+
+    subroutine EditFileName(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter name of output file:"
+
+        read(5, '(a)') pf%FileName
+    end subroutine EditFileName
+
+    character function GetCharInput() result(input)
+        read(5, '(a)') input
+        if(iachar(input) >= iachar('a') .AND. iachar(input) <= iachar('z')) then
+            input = char(iachar(input) - 32)
+        end if
+    end function GetCharInput
+
+    integer function GetIntInput() result(input)
+        read(5, *) input
+    end function GetIntInput
+
+    real*8 function GetRealInput() result(input)
+        read(5, *) input
+    end function GetRealInput
 
 end module iofunctions

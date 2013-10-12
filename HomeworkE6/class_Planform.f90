@@ -12,7 +12,7 @@ module class_Planform
 
     type Planform
         integer :: WingType = Tapered ! Wing type
-        integer :: NodesPerSemispan = 50 ! Number of nodes per semi-span
+        integer :: NNodes = 7 ! Total number of nodes
         real*8 :: AspectRatio = 8.0d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
         real*8 :: LiftSlope = 2.0d0 * pi ! Section lift slope
