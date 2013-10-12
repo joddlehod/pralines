@@ -19,7 +19,7 @@ contains
 
             ! Input parameters
             write(6, '(2x, a)') "Input Parameters:"
-            write(6, '(4x, a, a, a)') "W - Edit wing type ( ", &
+            write(6, '(4x, a, a, a)') "W - Toggle wing type ( ", &
                 & trim(GetWingType(pf)), " )"
             write(6, '(4x, a, i3, a)') "N - Edit number of nodes per semispan (", &
                 & (pf%NNodes + 1) / 2, " )"
@@ -69,7 +69,7 @@ contains
         ! Process input command
         ! Input parameters
         if (input == 'W') then
-            call EditWingType(pf)
+            call ToggleWingType(pf)
         else if (input == 'N') then
             call EditNodes(pf)
         else if (input == 'A') then
@@ -100,28 +100,14 @@ contains
         end if
     end function MainPageResponse
 
-    subroutine EditWingType(pf)
+    subroutine ToggleWingType(pf)
         type(Planform), intent(inout) :: pf
-
-        character :: input
-
-        write(6, *)
-        write(6, '(a)') "Select wing type:"
-        write(6, '(2x, a)') "T - Tapered"
-        write(6, '(2x, a)') "E - Elliptic"
-
-        write(6, *)
-        write(6, '(a)') "Your selection: "
-
-        input = GetCharInput()
-
-        if (input == 'T') then
-            pf%WingType = Tapered
-        else if (input == 'E') then
+        if (pf%WingType == Tapered) then
             pf%WingType = Elliptic
+        else if (pf%WingType == Elliptic) then
+            pf%WingType = Tapered
         end if
-
-    end subroutine EditWingType
+    end subroutine ToggleWingType
 
     subroutine EditNodes(pf)
         type(Planform), intent(inout) :: pf
