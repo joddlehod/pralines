@@ -7,41 +7,103 @@ contains
     subroutine runsimulation(pf)
         type(Planform), intent(in) :: pf
 
-        integer :: i
         real*8 :: c(pf%NNodes, pf%NNodes)
         real*8 :: c_inv(pf%NNodes, pf%NNodes)
         real*8 :: a(pf%NNodes)
+        logical :: print_to_file
 
-        write(6, '(a2, 2x, a22, 2x, a22, 2x, a22)') "i", "Theta", "z/b", "c/b"
-        do i = 1,pf%NNodes
-            write(6, '(i2, 2x, ES22.15, 2x, ES22.15, 2x, ES22.15)') &
-                & i, theta(i, pf%NNodes), z_over_b(i, pf%NNodes), c_over_b(i, pf)
-        end do
+        print_to_file = (pf%WriteCMatrix .or. pf%WriteCInverse &
+            & .or. pf%WriteFourier .or. pf%WriteOther)
+        if (print_to_file) then
+            open(unit=10, file=pf%FileName)
+        end if
 
         call ComputeC(pf, c)
         call ComputeCInverse(pf, c, c_inv)
+        call ComputeFourierCoefficients_a(pf, c_inv, a)
+        call ComputeWingCoefficients(pf, a)
 
-        call ComputeFourierCoefficients_a(pf%NNodes, c_inv, a)
-        write(6, *)
-        write(6, '(a)') "Fourier Coefficients:"
-        do i = 1, pf%NNodes
-            write(6, '(a, i2, a, f22.15)') "a", i, " = ", a(i)
-        end do
+        if (print_to_file) then
+            close(unit=10)
+        end if
 
     end subroutine runsimulation
 
-    subroutine ComputeFourierCoefficients_a(nnodes, c_inv, a)
+    subroutine ComputeFourierCoefficients_a(pf, c_inv, a)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: c_inv(pf%NNodes, pf%NNodes)
+        real*8, intent(out) :: a(pf%NNodes)
+
+        real*8 :: ones(pf%NNodes)
+        integer :: i
+        integer :: nnodes
+
+        nnodes = pf%NNodes
+        ones = (/ (1.0d0, i=1, nnodes) /)
+        a = matmul(c_inv, ones)
+
+        call PrintFourierCoefficients_a(6, nnodes, a)
+        if (pf%WriteFourier) then
+            call PrintFourierCoefficients_a(10, nnodes, a)
+        end if
+    end subroutine ComputeFourierCoefficients_a
+
+    subroutine PrintFourierCoefficients_a(u, nnodes, a)
+        integer, intent(in) :: u
         integer, intent(in) :: nnodes
-        real*8, intent(in) :: c_inv(nnodes, nnodes)
-        real*8, intent(out) :: a(nnodes)
+        real*8, intent(in) :: a(nnodes)
 
         integer :: i
 
-        real*8 :: ones(nnodes)
-        ones = (/ (1.0d0, i=1, nnodes) /)
+        write(u, '(a)') "Fourier Coefficients:"
+        do i = 1, nnodes
+            write(u, '(a, i2, a, ES22.15)') "a", i, " = ", a(i)
+        end do
+        write(u, *)
+    end subroutine PrintFourierCoefficients_a
 
-        a = matmul(c_inv, ones)
-    end subroutine ComputeFourierCoefficients_a
+    subroutine ComputeWingCoefficients(pf, a)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: a(pf%NNodes)
+
+        real*8 :: kl   ! Lift slope factor
+        real*8 :: kd   ! Induced drag factor
+        real*8 :: es   ! Span efficiency factor
+        real*8 :: cla  ! Wing lift slope
+        real*8 :: cl   ! Wing lift coefficient
+        real*8 :: cdi  ! Wing induced drag coefficient
+
+        kl = Kappa_L(pf, a(1))
+        kd = Kappa_D(pf, a)
+        es = SpanEfficiencyFactor(kd)
+        cla = C_L_alpha(pf, kl)
+        cl = C_L(cla, pf%AngleOfAttack, 0.0d0)
+        cdi = C_Di(cl, pf%AspectRatio, es)
+
+        call PrintWingCoefficients(6, kl, kd, es, cla, cl, cdi)
+        if (pf%WriteOther) then
+            call PrintWingCoefficients(10, kl, kd, es, cla, cl, cdi)
+        end if
+
+    end subroutine ComputeWingCoefficients
+
+    subroutine PrintWingCoefficients(u, kl, kd, es, cla, cl, cdi)
+        integer, intent(in) :: u   ! Output unit (6 = standard output)
+        real*8, intent(in) :: kl   ! Lift slope factor
+        real*8, intent(in) :: kd   ! Induced drag factor
+        real*8, intent(in) :: es   ! Span efficiency factor
+        real*8, intent(in) :: cla  ! Wing lift slope
+        real*8, intent(in) :: cl   ! Wing lift coefficient
+        real*8, intent(in) :: cdi  ! Wing induced drag coefficient
+
+        write(u, '(a, ES22.15)') "Lift slope factor (kappa_L):          ", kl
+        write(u, '(a, ES22.15)') "Induced drag factor (kappa_D):        ", kd
+        write(u, '(a, ES22.15)') "Span efficiency factor (es):          ", es
+        write(u, '(a, ES22.15)') "Wing lift slope (C_L_alpha):          ", cla
+        write(u, '(a, ES22.15)') "Wing lift coefficient (C_L):          ", cl
+        write(u, '(a, ES22.15)') "Wing induced drag coefficient (C_Di): ", cdi
+        write(u, *)
+    end subroutine PrintWingCoefficients
 
     real*8 function Kappa_L(pf, a1) result(kl)
         type(Planform), intent(in) :: pf
@@ -50,16 +112,15 @@ contains
         kl = 1.0d0 / ((1.0d0 + pi * pf%AspectRatio / pf%LiftSlope) * a1) - 1.0d0
     end function Kappa_L
 
-    real*8 function Kappa_D(pf, nnodes, a) result(kd)
+    real*8 function Kappa_D(pf, a) result(kd)
         type(Planform), intent(in) :: pf
-        integer, intent(in) :: nnodes
-        real*8, intent(in) :: a(nnodes)
+        real*8, intent(in) :: a(pf%NNodes)
 
         integer :: i
 
         kd = 0.0d0
-        do i = 2, nnodes
-            kd = kd + nnodes * (a(i) / a(1))**2
+        do i = 2, pf%NNodes
+            kd = kd + real(i, 8) * (a(i) / a(1))**2
         end do
     end function Kappa_D
 
@@ -105,8 +166,8 @@ contains
 
         if (pf%WingType == Tapered) then
             ! Calculate c/b for tapered wing
-            c_over_b_i = (2.0d0 * (pf%TaperRatio - 1.0d0) * &
-                & dabs(z_over_b(i, pf%NNodes)) + 1.0d0) / pf%AspectRatio
+            c_over_b_i = (2.0d0 * dabs(z_over_b(i, pf%NNodes)) * &
+                & (pf%TaperRatio - 1.0d0) + 1.0d0) / pf%AspectRatio
         else if (pf%WingType == Elliptic) then
             ! Calculate c/b for elliptic wing
             c_over_b_i = (4.0d0 * sin(theta(i, pf%NNodes))) / &
@@ -122,7 +183,7 @@ contains
         integer, intent(in) :: i
         integer, intent(in) :: nnodes
 
-        z_over_b_i = (real(i, 8) - 1.0d0) / (real(nnodes, 8) - 1.0d0) - 0.5d0
+        z_over_b_i = -0.5d0 * cos(theta(i, nnodes))
     end function z_over_b
 
     subroutine ComputeC(pf, c)
@@ -142,10 +203,22 @@ contains
             call Cij(c, i, pf)
         end do
 
-        write(6, *)
-        write(6, *) "[C] Matrix:"
-        call printmat(nnodes, nnodes, c)
+        call PrintC(6, nnodes, c)
+        if (pf%WriteCMatrix) then
+            call PrintC(10, nnodes, c)
+        end if
     end subroutine ComputeC
+
+    subroutine PrintC(u, nnodes, c)
+        integer, intent(in) :: u
+        integer, intent(in) :: nnodes
+        real*8, intent(in) :: c(nnodes, nnodes)
+
+        write(u, *) "[C] Matrix:"
+        call printmat(u, nnodes, nnodes, c)
+        write(u, *)
+
+    end subroutine PrintC
 
     subroutine ComputeCInverse(pf, c, c_inv)
         type(Planform), intent(in) :: pf
@@ -154,10 +227,22 @@ contains
 
         call matinv(pf%NNodes, c, c_inv)
 
-        write(6, *)
-        write(6, *) "[C]^-1 Matrix:"
-        call printmat(pf%NNodes, pf%NNodes, c_inv)
+        call PrintCInverse(6, pf%NNodes, c_inv)
+        if (pf%WriteCInverse) then
+            call PrintCInverse(10, pf%NNodes, c_inv)
+        end if
     end subroutine ComputeCInverse
+
+    subroutine PrintCInverse(u, nnodes, c_inv)
+        integer, intent(in) :: u
+        integer, intent(in) :: nnodes
+        real*8, intent(in) :: c_inv(nnodes, nnodes)
+
+        write(u, *) "[C]^-1 Matrix:"
+        call printmat(u, nnodes, nnodes, c_inv)
+        write(u, *)
+
+    end subroutine PrintCInverse
 
     subroutine C1j_Nj(c, pf)
         real*8, dimension(:,:), intent(inout) :: c
@@ -167,7 +252,6 @@ contains
         integer :: jsq
         integer :: nnode
         real*8 :: c_over_b_1
-        real*8 :: c_over_b_N
 
         nnode = pf%NNodes
         do j = 1, nnode
@@ -178,12 +262,7 @@ contains
 
         c_over_b_1 = c_over_b(1, pf)
         if (dabs(c_over_b_1) < 1.0d-10) then
-            call C1j_Nj_zero_chord(c, 1, pf)
-        end if
-
-        c_over_b_N = c_over_b(nnode, pf)
-        if (dabs(c_over_b_N) < 1.0d-10) then
-            call C1j_Nj_zero_chord(c, nnode, pf)
+            call C1j_Nj_zero_chord(c, pf)
         end if
 
     end subroutine C1j_Nj
@@ -205,23 +284,27 @@ contains
         sin_theta_i = sin(theta_i)
 
         do j = 1, nnode
-            c(i, j) = (4.0d0 / pf%LiftSlope / c_over_b_i + &
+            c(i, j) = (4.0d0 / (pf%LiftSlope * c_over_b_i) + &
                 & real(j, 8) / sin_theta_i) * sin(real(j, 8) * theta_i)
         end do
     end subroutine Cij
 
-    subroutine C1j_Nj_zero_chord(c, i, pf)
+    subroutine C1j_Nj_zero_chord(c, pf)
         real*8, dimension(:,:), intent(inout) :: c
-        integer, intent(in) :: i
         type(Planform), intent(in) :: pf
 
-        integer :: j
+        integer :: j, n
+
+        n = pf%NNodes
 
         if (pf%WingType == Tapered) then
             ! limit = 0, so do nothing
         else if (pf%WingType == Elliptic) then
             do j = 1, pf%NNodes
-                c(i, j) = c(i, j) + pi * pf%AspectRatio / pf%LiftSlope
+                c(1, j) = c(1, j) + real(j, 8) * pi * &
+                    & pf%AspectRatio / pf%LiftSlope
+                c(n, j) = c(n, j) + real((-1)**(j + 1) * j, 8) * pi * &
+                    & pf%AspectRatio / pf%LiftSlope
             end do
         else
             stop "*** Unknown Wing Type ***"

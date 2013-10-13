@@ -11,17 +11,22 @@ module class_Planform
     end enum
 
     type Planform
+        ! Wing Parameters
         integer :: WingType = Tapered ! Wing type
         integer :: NNodes = 7 ! Total number of nodes
         real*8 :: AspectRatio = 8.0d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
         real*8 :: LiftSlope = 2.0d0 * pi ! Section lift slope
 
-        character*80 :: FileName = ".\HomeworkE6.out" ! Name of output file
+        ! Output Options
         logical :: WriteCMatrix = .true.  ! Write C Matrix to output file?
         logical :: WriteCInverse = .true.  ! Write Inv(C) Matrix to output file?
         logical :: WriteFourier = .true.  ! Write Fourier coefficients?
         logical :: WriteOther = .true.  ! Write KL, KD, eps, and lift slope?
+        character*80 :: FileName = "HomeworkE6.out" ! Name of output file
+
+        ! Operating Conditions
+        real*8 :: AngleOfAttack = 0.0d0 ! Angle of Attack
 
     end type Planform
 

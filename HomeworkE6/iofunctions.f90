@@ -17,8 +17,8 @@ contains
             ! Display options to user
             write(6, '(a)') "Select from the following options:"
 
-            ! Input parameters
-            write(6, '(2x, a)') "Input Parameters:"
+            ! Wing parameters
+            write(6, '(2x, a)') "Wing Parameters:"
             write(6, '(4x, a, a, a)') "W - Toggle wing type ( ", &
                 & trim(GetWingType(pf)), " )"
             write(6, '(4x, a, i3, a)') "N - Edit number of nodes per semispan (", &
@@ -31,8 +31,6 @@ contains
             end if
             write(6, '(4x, a, f11.7, a)') "S - Edit section lift slope (", &
                 & pf%LiftSlope, " )"
-            write(6, '(4x, a, a, a)') "O - Edit output file name ( ", &
-                & trim(pf%FileName), " )"
 
             ! Output options
             write(6, *)
@@ -45,6 +43,14 @@ contains
                 & pf%WriteFourier, " )"
             write(6, '(4x, a, a, l1, a)') "K - Toggle output of KL, KD, es, ", &
                 & "and section lift slope ( ", pf%WriteOther, " )"
+            write(6, '(4x, a, a, a)') "O - Edit output file name ( ", &
+                & trim(pf%FileName), " )"
+
+            ! Operating Conditions
+            write(6, *)
+            write(6, '(2x, a)') "Operating Conditions:"
+            write(6, '(4x, a, f7.4, a)') "G - Edit Angle of Attack (", &
+                & pf%AngleOfAttack, " )"
 
             ! Main Execution commands
             write(6, *)
@@ -55,6 +61,8 @@ contains
             write(6, '(a)') "Your selection: "
 
             input = GetCharInput()
+            write(6, *)
+
             cont = MainPageResponse(pf, input)
         end do
     end subroutine MainPage
@@ -67,7 +75,7 @@ contains
         cont = .true.
 
         ! Process input command
-        ! Input parameters
+        ! Wing parameters
         if (input == 'W') then
             call ToggleWingType(pf)
         else if (input == 'N') then
@@ -78,8 +86,6 @@ contains
             call EditTaperRatio(pf)
         else if (input == 'S') then
             call EditLiftSlope(pf)
-        else if (input == 'O') then
-            call EditFileName(pf)
 
         ! Output options
         else if (input == 'C') then
@@ -90,6 +96,12 @@ contains
             pf%WriteFourier = .not. pf%WriteFourier
         else if (input == 'K') then
             pf%WriteOther = .not. pf%WriteOther
+        else if (input == 'O') then
+            call EditFileName(pf)
+
+        ! Operating Conditions
+        else if (input == 'G') then
+            call EditAngleOfAttack(pf)
 
         ! Main Execution Commands
         else if (input == 'R') then
@@ -168,6 +180,15 @@ contains
 
         read(5, '(a)') pf%FileName
     end subroutine EditFileName
+
+    subroutine EditAngleOfAttack(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter angle of attack (radians):"
+
+        pf%AngleOfAttack = GetRealInput()
+    end subroutine EditAngleOfAttack
 
     character function GetCharInput() result(input)
         read(5, '(a)') input

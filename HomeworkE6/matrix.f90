@@ -47,7 +47,8 @@ contains
 
     end subroutine matinv
 
-    subroutine printmat(m, n, mat)
+    subroutine printmat(u, m, n, mat)
+        integer, intent(in) :: u
         integer, intent(in) :: m
         integer, intent(in) :: n
         real*8, intent(in) :: mat(m, n)
@@ -55,9 +56,14 @@ contains
         integer :: i, j
         character*80 :: format_string
 
-        write(format_string, '(a, i3, a)') "(", n, "(F9.5, 2x))"
+        if (u == 6) then
+            write(format_string, '(a, i3, a)') "(", n, "(F9.5, 2x))"
+        else
+            write(format_string, '(a, i3, a)') "(", n, "(ES22.15, 2x))"
+        end if
+
         do i = 1, m
-            write(6, format_string) (mat(i, j), j=1, n)
+            write(u, format_string) (mat(i, j), j=1, n)
         end do
     end subroutine printmat
 
