@@ -2,50 +2,41 @@ module matrix
     implicit none
 
 contains
-    subroutine matinv(n, mat, mat_inv)
+    subroutine matinv_gauss(n, mat, mat_inv)
         integer, intent(in) :: n
         real*8, intent(in) :: mat(n,n)
         real*8, intent(out) :: mat_inv(n,n)
 
-        integer :: i, j, k
-        real*8 :: mat_aug(n, 2*n)
-        real*8 :: pivot, factor
+        real*8 :: b(n, n), c, d, temp(n)
+        integer :: i, j, k, m, imax(1), ipvt(n)
 
-        mat_aug = reshape((/ ((0.0d0, i=1, n), j=1, 2*n) /), shape(mat_aug))
+        b = mat
+        ipvt = (/ (i, i=1, n) /)
 
-        do i = 1, n
-            mat_aug(i, i + n) = 1.0d0
+        do k = 1, n
+            imax = maxloc(abs(b(k:n, k)))
+            m = k - 1 + imax(1)
+
+            if (m /= k) then
+                ipvt( (/m, k/) ) = ipvt( (/k, m/) )
+                b( (/m, k/), :) = b( (/k, m/), :)
+            end if
+
+            d = 1.0d0 / b(k, k)
+
+            temp = b(:, k)
             do j = 1, n
-                mat_aug(i, j) = mat(i, j)
+                c = b(k, j) * d
+                b(:, j) = b(:, j) - temp * c
+                b(k, j) = c
             end do
+            b(:, k) = temp * (-d)
+            b(k, k) = d
         end do
 
-        do i = 1, n
-            do j = 1, n
-                if (dabs(mat_aug(i, j)) > 0.0d0) then
-                    pivot = mat_aug(i, j)
-                    exit
-                end if
-            end do
+        mat_inv(:, ipvt) = b
+    end subroutine matinv_gauss
 
-            do j = 1, 2*n
-                mat_aug(i, j) = mat_aug(i, j) / pivot
-            end do
-            pivot = 1.0d0
-
-            do j = 1, n
-                if (j /= i) then
-                    factor = mat_aug(j, i) / pivot
-                    do k = 1, 2*n
-                        mat_aug(j, k) = mat_aug(j, k) - factor * mat_aug(i, k)
-                    end do
-                end if
-            end do
-        end do
-
-        mat_inv = reshape((/ ((mat_aug(i, j), i=1, n), j=n+1, 2*n) /), shape(mat_inv))
-
-    end subroutine matinv
 
     subroutine printmat(u, m, n, mat)
         integer, intent(in) :: u

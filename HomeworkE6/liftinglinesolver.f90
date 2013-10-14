@@ -4,7 +4,7 @@ module liftinglinesolver
     implicit none
 
 contains
-    subroutine runsimulation(pf)
+    subroutine RunSimulation(pf)
         type(Planform), intent(in) :: pf
 
         real*8 :: c(pf%NNodes, pf%NNodes)
@@ -18,6 +18,11 @@ contains
             open(unit=10, file=pf%FileName)
         end if
 
+        call PrintPlanformSummary(6, pf)
+        if (print_to_file) then
+            call PrintPlanformSummary(10, pf)
+        end if
+
         call ComputeC(pf, c)
         call ComputeCInverse(pf, c, c_inv)
         call ComputeFourierCoefficients_a(pf, c_inv, a)
@@ -27,7 +32,40 @@ contains
             close(unit=10)
         end if
 
-    end subroutine runsimulation
+    end subroutine RunSimulation
+
+    subroutine PrintPlanformSummary(u, pf)
+        integer, intent(in) :: u
+        type(Planform), intent(in) :: pf
+
+        character*8 :: wtype
+        character*16 :: fmt_str
+        integer :: log_nnodes
+
+        if (pf%WingType == Tapered) then
+            wtype = "Tapered"
+        else if (pf%WingType == Elliptic) then
+            wtype = "Elliptic"
+        else
+            wtype = "Unknown"
+        end if
+
+        log_nnodes = log10(real(pf%NNodes)) + 1
+        write(fmt_str, '(a,i1,a,i1,a)') "(2x,a,i", log_nnodes, ",a,i", &
+            & log_nnodes, ",a)"
+
+        write(u, *) "Planform Summary:"
+        write(u, '(2x,a,a)') "Wing type = ", wtype
+        write(u, '(2x,a,ES22.15)') "Airfoil section lift slope = ", pf%LiftSlope
+        write(u, fmt_str) "N  = ", pf%NNodes, " (", &
+            & (pf%NNodes + 1) / 2, " nodes per semispan)"
+        write(u, '(2x,a,ES22.15)') "RA = ", pf%AspectRatio
+        if (pf%WingType == Tapered) then
+            write(u, '(2x,a,ES22.15)') "RT = ", pf%TaperRatio
+        end if
+        write(u, '(2x,a,ES22.15,a)') "alpha = ", pf%AngleOfAttack, " rad"
+        write(u, *)
+    end subroutine PrintPlanformSummary
 
     subroutine ComputeFourierCoefficients_a(pf, c_inv, a)
         type(Planform), intent(in) :: pf
@@ -84,7 +122,6 @@ contains
         if (pf%WriteOther) then
             call PrintWingCoefficients(10, kl, kd, es, cla, cl, cdi)
         end if
-
     end subroutine ComputeWingCoefficients
 
     subroutine PrintWingCoefficients(u, kl, kd, es, cla, cl, cdi)
@@ -96,12 +133,14 @@ contains
         real*8, intent(in) :: cl   ! Wing lift coefficient
         real*8, intent(in) :: cdi  ! Wing induced drag coefficient
 
-        write(u, '(a, ES22.15)') "Lift slope factor (kappa_L):          ", kl
-        write(u, '(a, ES22.15)') "Induced drag factor (kappa_D):        ", kd
-        write(u, '(a, ES22.15)') "Span efficiency factor (es):          ", es
-        write(u, '(a, ES22.15)') "Wing lift slope (C_L_alpha):          ", cla
-        write(u, '(a, ES22.15)') "Wing lift coefficient (C_L):          ", cl
-        write(u, '(a, ES22.15)') "Wing induced drag coefficient (C_Di): ", cdi
+        write(u, '(a, ES22.15)') "KL  = ", kl
+        write(u, '(a, ES22.15)') "CLa = ", cla
+        write(u, '(a, ES22.15)') "CL  = ", cl
+        write(u, *)
+
+        write(u, '(a, ES22.15)') "KD  = ", kd
+        write(u, '(a, ES22.15)') "es  = ", es
+        write(u, '(a, ES22.15)') "CDi = ", cdi
         write(u, *)
     end subroutine PrintWingCoefficients
 
@@ -225,7 +264,7 @@ contains
         real*8, intent(inout) :: c(pf%NNodes, pf%NNodes)
         real*8, intent(inout) :: c_inv(pf%NNodes, pf%NNodes)
 
-        call matinv(pf%NNodes, c, c_inv)
+        call matinv_gauss(pf%NNodes, c, c_inv)
 
         call PrintCInverse(6, pf%NNodes, c_inv)
         if (pf%WriteCInverse) then
