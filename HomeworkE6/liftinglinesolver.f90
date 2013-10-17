@@ -5,11 +5,12 @@ module liftinglinesolver
 
 contains
     subroutine RunSimulation(pf)
-        type(Planform), intent(in) :: pf
+        type(Planform), intent(inout) :: pf
 
         real*8 :: c(pf%NNodes, pf%NNodes)
         real*8 :: c_inv(pf%NNodes, pf%NNodes)
         real*8 :: a(pf%NNodes)
+        real*8 :: b(pf%NNodes)
         logical :: print_to_file
 
         print_to_file = (pf%WriteCMatrix .or. pf%WriteCInverse &
@@ -26,7 +27,8 @@ contains
         call ComputeC(pf, c)
         call ComputeCInverse(pf, c, c_inv)
         call ComputeFourierCoefficients_a(pf, c_inv, a)
-        call ComputeWingCoefficients(pf, a)
+        call ComputeFourierCoefficients_b(pf, c_inv, b)
+        call ComputeWingCoefficients(pf, a, b)
 
         if (print_to_file) then
             close(unit=10)
@@ -50,7 +52,7 @@ contains
             wtype = "Unknown"
         end if
 
-        log_nnodes = log10(real(pf%NNodes)) + 1
+        log_nnodes = int(log10(real(pf%NNodes))) + 1
         write(fmt_str, '(a,i1,a,i1,a)') "(2x,a,i", log_nnodes, ",a,i", &
             & log_nnodes, ",a)"
 
@@ -63,7 +65,10 @@ contains
         if (pf%WingType == Tapered) then
             write(u, '(2x,a,ES22.15)') "RT = ", pf%TaperRatio
         end if
-        write(u, '(2x,a,ES22.15,a)') "alpha = ", pf%AngleOfAttack, " rad"
+        write(u, '(2x,a,ES22.15,a)') "alpha = ", &
+            & pf%AngleOfAttack * 180.0d0 / pi, " deg"
+        write(u, '(2x,a,ES22.15,a)') "omega = ", &
+            & pf%Omega * 180.0d0 / pi, " deg"
         write(u, *)
     end subroutine PrintPlanformSummary
 
@@ -78,87 +83,174 @@ contains
 
         nnodes = pf%NNodes
         ones = (/ (1.0d0, i=1, nnodes) /)
+        if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+            ones(1) = 0.0d0
+            ones(nnodes) = 0.0d0
+        end if
+
         a = matmul(c_inv, ones)
 
-        call PrintFourierCoefficients_a(6, nnodes, a)
+        call PrintFourierCoefficients(6, nnodes, "a", a)
         if (pf%WriteFourier) then
-            call PrintFourierCoefficients_a(10, nnodes, a)
+            call PrintFourierCoefficients(10, nnodes, "a", a)
         end if
     end subroutine ComputeFourierCoefficients_a
 
-    subroutine PrintFourierCoefficients_a(u, nnodes, a)
+    subroutine ComputeFourierCoefficients_b(pf, c_inv, b)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: c_inv(pf%NNodes, pf%NNodes)
+        real*8, intent(out) :: b(pf%NNodes)
+
+        real*8 :: omega(pf%NNodes)
+        integer :: i
+        integer :: nnodes
+
+        nnodes = pf%NNodes
+        omega = (/ (dabs(cos(theta(i, nnodes))), i=1, nnodes) /)
+        if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+            omega(1) = 0.0d0
+            omega(nnodes) = 0.0d0
+        end if
+
+        b = matmul(c_inv, omega)
+
+        call PrintFourierCoefficients(6, nnodes, "b", b)
+        if (pf%WriteFourier) then
+            call PrintFourierCoefficients(10, nnodes, "b", b)
+        end if
+    end subroutine ComputeFourierCoefficients_b
+
+    subroutine PrintFourierCoefficients(u, nnodes, name, fc)
         integer, intent(in) :: u
         integer, intent(in) :: nnodes
-        real*8, intent(in) :: a(nnodes)
+        real*8, intent(in) :: fc(nnodes)
+        character :: name
 
         integer :: i
 
-        write(u, '(a)') "Fourier Coefficients:"
+        write(u, '(a,a,a)') "Fourier Coefficients - ", name, "(n):"
         do i = 1, nnodes
-            write(u, '(a, i2, a, ES22.15)') "a", i, " = ", a(i)
+            write(u, '(a, i2, a, ES22.15)') name, i, " = ", fc(i)
         end do
         write(u, *)
-    end subroutine PrintFourierCoefficients_a
+    end subroutine PrintFourierCoefficients
 
-    subroutine ComputeWingCoefficients(pf, a)
-        type(Planform), intent(in) :: pf
+    subroutine ComputeWingCoefficients(pf, a, b)
+        type(Planform), intent(inout) :: pf
         real*8, intent(in) :: a(pf%NNodes)
+        real*8, intent(in) :: b(pf%NNodes)
 
         real*8 :: kl   ! Lift slope factor
-        real*8 :: kd   ! Induced drag factor
-        real*8 :: es   ! Span efficiency factor
+        real*8 :: ew   ! Washout effectiveness (epsilon_omega)
         real*8 :: cla  ! Wing lift slope
         real*8 :: cl   ! Wing lift coefficient
+        real*8 :: alpha! Root aerodynamic angle of attack
+
+        real*8 :: kd   ! Induced drag factor
+        real*8 :: kdl  ! Lift-washout contribution to induced drag
+        real*8 :: kdw  ! Washout contribution to induced drag
+        real*8 :: es   ! Span efficiency factor
         real*8 :: cdi  ! Wing induced drag coefficient
 
-        kl = Kappa_L(pf, a(1))
-        kd = Kappa_D(pf, a)
-        es = SpanEfficiencyFactor(kd)
-        cla = C_L_alpha(pf, kl)
-        cl = C_L(cla, pf%AngleOfAttack, 0.0d0)
-        cdi = C_Di(cl, pf%AspectRatio, es)
+        kl = Kappa_L(pf%AspectRatio, pf%LiftSlope, a(1))
+        ew = Epsilon_Omega(a(1), b(1))
+        cla = C_L_alpha(pf%AspectRatio, a(1))
 
-        call PrintWingCoefficients(6, kl, kd, es, cla, cl, cdi)
+        if (pf%SpecifyAlpha) then
+            cl = C_L(cla, pf%AngleOfAttack, ew, pf%Omega)
+            pf%LiftCoefficient = cl
+        else
+            alpha = RootAlpha(cla, pf%LiftCoefficient, ew, pf%Omega)
+            pf%AngleOfAttack = alpha
+        end if
+
+        kd = Kappa_D(pf%NNodes, a)
+        es = SpanEfficiencyFactor(kd)
+        kdl = Kappa_DL(pf%NNodes, a, b)
+        kdw = Kappa_DOmega(pf%NNodes, a, b)
+        cdi = C_Di(cl, kd, kdl, cla, pf%Omega, kdw, pf%AspectRatio)
+
+        call PrintWingCoefficients(6, kl, ew, cla, cl, kd, kdl, kdw, es, cdi)
         if (pf%WriteOther) then
-            call PrintWingCoefficients(10, kl, kd, es, cla, cl, cdi)
+            call PrintWingCoefficients(10, kl, ew, cla, cl, kd, kdl, kdw, es, cdi)
         end if
     end subroutine ComputeWingCoefficients
 
-    subroutine PrintWingCoefficients(u, kl, kd, es, cla, cl, cdi)
+    subroutine PrintWingCoefficients(u, kl, ew, cla, cl, kd, kdl, kdw, es, cdi)
         integer, intent(in) :: u   ! Output unit (6 = standard output)
         real*8, intent(in) :: kl   ! Lift slope factor
-        real*8, intent(in) :: kd   ! Induced drag factor
-        real*8, intent(in) :: es   ! Span efficiency factor
+        real*8, intent(in) :: ew   ! Washout effectiveness (epsilon_omega)
         real*8, intent(in) :: cla  ! Wing lift slope
         real*8, intent(in) :: cl   ! Wing lift coefficient
+
+        real*8, intent(in) :: kd   ! Induced drag factor
+        real*8, intent(in) :: kdl  ! Lift-washout contribution to induced drag
+        real*8, intent(in) :: kdw  ! Washout contribution to induced drag
+        real*8, intent(in) :: es   ! Span efficiency factor
         real*8, intent(in) :: cdi  ! Wing induced drag coefficient
 
         write(u, '(a, ES22.15)') "KL  = ", kl
         write(u, '(a, ES22.15)') "CLa = ", cla
+        write(u, '(a, ES22.15)') "EW  = ", ew
         write(u, '(a, ES22.15)') "CL  = ", cl
         write(u, *)
 
         write(u, '(a, ES22.15)') "KD  = ", kd
+        write(u, '(a, ES22.15)') "KDL = ", kdl
+        write(u, '(a, ES22.15)') "KDW = ", kdw
         write(u, '(a, ES22.15)') "es  = ", es
         write(u, '(a, ES22.15)') "CDi = ", cdi
         write(u, *)
     end subroutine PrintWingCoefficients
 
-    real*8 function Kappa_L(pf, a1) result(kl)
-        type(Planform), intent(in) :: pf
+    real*8 function Kappa_L(ra, cla_section, a1) result(kl)
+        real*8, intent(in) :: ra
+        real*8, intent(in) :: cla_section
         real*8, intent(in) :: a1
 
-        kl = 1.0d0 / ((1.0d0 + pi * pf%AspectRatio / pf%LiftSlope) * a1) - 1.0d0
+        kl = 1.0d0 / ((1.0d0 + pi * ra / cla_section) * a1) - 1.0d0
     end function Kappa_L
 
-    real*8 function Kappa_D(pf, a) result(kd)
-        type(Planform), intent(in) :: pf
-        real*8, intent(in) :: a(pf%NNodes)
+    real*8 function Epsilon_Omega(a1, b1) result(ew)
+        real*8, intent(in) :: a1
+        real*8, intent(in) :: b1
+
+        ew = b1 / a1
+    end function Epsilon_Omega
+
+    real*8 function C_L_alpha(ra, a1) result(cla)
+        real*8, intent(in) :: ra
+        real*8, intent(in) :: a1
+
+        cla = pi * ra * a1
+    end function C_L_alpha
+
+    real*8 function C_L(cla, alpha, ew, omega) result(cl)
+        real*8, intent(in) :: cla
+        real*8, intent(in) :: alpha
+        real*8, intent(in) :: ew
+        real*8, intent(in) :: omega
+
+        cl = cla * (alpha - ew * omega)
+    end function C_L
+
+    real*8 function RootAlpha(cla, cl, ew, omega) result(alpha)
+        real*8, intent(in) :: cla
+        real*8, intent(in) :: cl
+        real*8, intent(in) :: ew
+        real*8, intent(in) :: omega
+
+        alpha = cl / cla + ew * omega
+    end function RootAlpha
+
+    real*8 function Kappa_D(nnodes, a) result(kd)
+        integer, intent(in) :: nnodes
+        real*8, intent(in) :: a(nnodes)
 
         integer :: i
 
         kd = 0.0d0
-        do i = 2, pf%NNodes
+        do i = 2, nnodes
             kd = kd + real(i, 8) * (a(i) / a(1))**2
         end do
     end function Kappa_D
@@ -168,45 +260,67 @@ contains
         es = 1.0d0 / (1.0d0 + kd)
     end function SpanEfficiencyFactor
 
-    real*8 function C_L_alpha(pf, kl) result(cla)
-        type(Planform), intent(in) :: pf
-        real*8, intent(in) :: kl
+    real*8 function Kappa_DL(nnodes, a, b) result (kdl)
+        integer, intent(in) :: nnodes
+        real*8, intent(in) :: a(nnodes)
+        real*8, intent(in) :: b(nnodes)
 
-        cla = pf%LiftSlope / (1.0d0 + pf%LiftSlope / (pi * pf%AspectRatio)) / &
-            & (1.0d0 + kl)
-    end function C_L_alpha
+        integer :: i
 
-    real*8 function C_L(cla, alpha, alpha_l0) result(cl)
-        real*8, intent(in) :: cla
-        real*8, intent(in) :: alpha
-        real*8, intent(in) :: alpha_l0
+        kdl = 0.0d0
+        do i = 2, nnodes
+            kdl = kdl + real(i, 8) * a(i) / a(1) * &
+                & (b(i) / b(1) - a(i) / a(1))
+        end do
+        kdl = kdl * 2.0d0 * b(1) / a(1)
+    end function Kappa_DL
 
-        cl = cla * (alpha - alpha_l0)
-    end function C_L
+    real*8 function Kappa_DOmega(nnodes, a, b) result(kdw)
+        integer, intent(in) :: nnodes
+        real*8, intent(in) :: a(nnodes)
+        real*8, intent(in) :: b(nnodes)
 
-    real*8 function C_Di(cl, ra, es) result (cdi)
+        integer :: i
+
+        kdw = 0.0d0
+        do i = 2, nnodes
+            kdw = kdw + real(i, 8) * (b(i) / b(1) - a(i) / a(1))**2
+        end do
+        kdw = kdw * (b(1) / a(1))**2
+    end function Kappa_DOmega
+
+    real*8 function C_Di(cl, kd, kdl, cla, omega, kdw, ra) result (cdi)
         real*8, intent(in) :: cl
+        real*8, intent(in) :: kd
+        real*8, intent(in) :: kdl
+        real*8, intent(in) :: cla
+        real*8, intent(in) :: omega
+        real*8, intent(in) :: kdw
         real*8, intent(in) :: ra
-        real*8, intent(in) :: es
 
-        cdi = (cl * cl) / (pi * ra * es)
+        cdi = (cl * cl * (1.0d0 + kd) - kdl * cl * cla * omega + &
+            & kdw * (cla * omega)**2) / (pi * ra)
     end function C_Di
 
-    real*8 function theta(i, nnode) result(theta_i)
+    real*8 function theta(i, nnodes) result(theta_i)
         integer, intent(in) :: i
-        integer, intent(in) :: nnode
+        integer, intent(in) :: nnodes
 
-        theta_i = real(i - 1, 8) * pi / real(nnode - 1, 8)
+        theta_i = real(i - 1, 8) * pi / real(nnodes - 1, 8)
     end function theta
 
     real*8 function c_over_b(i, pf) result(c_over_b_i)
         integer, intent(in) :: i
         type(Planform), intent(in) :: pf
 
+        real*8 :: theta_i
+
+        theta_i = theta(i, pf%NNodes)
+
         if (pf%WingType == Tapered) then
             ! Calculate c/b for tapered wing
-            c_over_b_i = (2.0d0 * dabs(z_over_b(i, pf%NNodes)) * &
-                & (pf%TaperRatio - 1.0d0) + 1.0d0) / pf%AspectRatio
+            c_over_b_i = (2.0d0 * (1.0d0 - (1.0d0 - pf%TaperRatio) * &
+                & dabs(cos(theta_i)))) / (pf%AspectRatio * (1.0d0 + pf%TaperRatio))
         else if (pf%WingType == Elliptic) then
             ! Calculate c/b for elliptic wing
             c_over_b_i = (4.0d0 * sin(theta(i, pf%NNodes))) / &
@@ -337,7 +451,7 @@ contains
         n = pf%NNodes
 
         if (pf%WingType == Tapered) then
-            ! limit = 0, so do nothing
+            ! TODO: Add code for RT = 0.0 here!
         else if (pf%WingType == Elliptic) then
             do j = 1, pf%NNodes
                 c(1, j) = c(1, j) + real(j, 8) * pi * &

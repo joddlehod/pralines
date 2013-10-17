@@ -30,6 +30,12 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-fcheck=recursion" />
+			<Add option="-fcheck=pointer" />
+			<Add option="-fcheck=mem" />
+			<Add option="-fcheck=do" />
+			<Add option="-fcheck=array-temps" />
+			<Add option="-fcheck=all" />
 			<Add option="-g" />
 		</Compiler>
 		<Unit filename="class_Planform.f90">

@@ -11,7 +11,7 @@ contains
         logical :: cont = .true.
 
         do while (cont)
-            ! Clear the screan
+            ! Clear the screen
             call system('cls')
 
             ! Display options to user
@@ -49,8 +49,12 @@ contains
             ! Operating Conditions
             write(6, *)
             write(6, '(2x, a)') "Operating Conditions:"
-            write(6, '(4x, a, f7.4, a)') "G - Edit Angle of Attack (", &
-                & pf%AngleOfAttack, " )"
+            write(6, '(4x, a, f7.4, a)') "G - Edit root aerodynamic angle of attack (", &
+                & pf%AngleOfAttack * 180.0d0 / pi, " deg )"
+            write(6, '(4x, a, f7.4, a)') "B - Edit lift coefficient (", &
+                & pf%LiftCoefficient, " )"
+            write(6, '(4x, a, f7.4, a)') "L - Edit amount of linear twist (", &
+                & pf%Omega * 180.0d0 / pi, " deg )"
 
             ! Main Execution commands
             write(6, *)
@@ -102,6 +106,10 @@ contains
         ! Operating Conditions
         else if (input == 'G') then
             call EditAngleOfAttack(pf)
+        else if (input == 'B') then
+            call EditLiftCoefficient(pf)
+        else if (input == 'L') then
+            call EditOmega(pf)
 
         ! Main Execution Commands
         else if (input == 'R') then
@@ -185,10 +193,38 @@ contains
         type(Planform), intent(inout) :: pf
 
         write(6, *)
-        write(6, '(a)') "Enter angle of attack (radians):"
+        write(6, '(a)') "NOTE: This operation will calculate a new lift coefficient."
+        write(6, '(a,a,f7.4,a)') "Enter desired root aerodynamic angle of ", &
+            " attack in degrees (", pf%AngleOfAttack * 180.0d0 / pi, " ):"
 
-        pf%AngleOfAttack = GetRealInput()
+        pf%DesiredAngleOfAttack = GetRealInput() * pi / 180.0d0
+        pf%AngleOfAttack = pf%DesiredAngleOfAttack
+        pf%SpecifyAlpha = .true.
+        call RunSimulation(pf)
     end subroutine EditAngleOfAttack
+
+    subroutine EditLiftCoefficient(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "NOTE: This operation will calculate a new root aerodynamic angle of attack."
+        write(6, '(a, f7.4, a)') "Enter desired lift coefficient (", &
+            pf%DesiredLiftCoefficient, " ):"
+
+        pf%DesiredLiftCoefficient = GetRealInput()
+        pf%LiftCoefficient = pf%DesiredLiftCoefficient
+        pf%SpecifyAlpha = .false.
+        call RunSimulation(pf)
+    end subroutine EditLiftCoefficient
+
+    subroutine EditOmega(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter amount of linear twist (degrees):"
+
+        pf%Omega = GetRealInput() * pi / 180.0d0
+    end subroutine EditOmega
 
     character function GetCharInput() result(input)
         read(5, '(a)') input

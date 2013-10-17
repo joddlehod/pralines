@@ -26,7 +26,18 @@ module class_Planform
         character*80 :: FileName = "HomeworkE6.out" ! Name of output file
 
         ! Operating Conditions
-        real*8 :: AngleOfAttack = 0.0d0 ! Angle of Attack
+        real*8 :: DesiredAngleOfAttack = pi / 36.0d0 ! Desired root aerodynamic angle of Attack
+                                                     ! (alpha - alpha_L0), in radians
+                                                     ! When specified, a new LiftCoefficient is calculated
+        real*8 :: AngleOfAttack = pi / 36.0d0 ! Root Aerodynamic Angle of Attack
+                                              ! (alpha - alpha_L0), in radians
+        real*8 :: DesiredLiftCoefficient = 0.4d0 ! Desired lift coefficient
+                                                 ! When specified, a new AngleOfAttack is calculated
+        real*8 :: LiftCoefficient = 0.4d0 ! Lift coefficient
+        real*8 :: Omega = 0.0d0 ! Amount of linear twist, in radians
+        logical :: SpecifyAlpha = .true. ! Was alpha specified?
+                                         ! .true.  = Use desired alpha to calculate CL
+                                         ! .false. = Use desired CL to calculate alpha
 
     end type Planform
 
