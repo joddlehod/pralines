@@ -17,13 +17,15 @@ module class_Planform
         real*8 :: AspectRatio = 8.0d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
         real*8 :: LiftSlope = 2.0d0 * pi ! Section lift slope
+        real*8 :: AileronRoot = 0.25d0 ! Location of aileron root (z/b)
+        real*8 :: AileronTip = 0.45d0 ! Location of aileron tip (z/b)
 
         ! Output Options
         logical :: WriteCMatrix = .true.  ! Write C Matrix to output file?
         logical :: WriteCInverse = .true.  ! Write Inv(C) Matrix to output file?
         logical :: WriteFourier = .true.  ! Write Fourier coefficients?
         logical :: WriteOther = .true.  ! Write KL, KD, eps, and lift slope?
-        character*80 :: FileName = "HomeworkE6.out" ! Name of output file
+        character*80 :: FileName = "PrandtlsLiftingLine.out" ! Name of output file
 
         ! Operating Conditions
         real*8 :: DesiredAngleOfAttack = pi / 36.0d0 ! Desired root aerodynamic angle of Attack
@@ -35,6 +37,9 @@ module class_Planform
                                                  ! When specified, a new AngleOfAttack is calculated
         real*8 :: LiftCoefficient = 0.4d0 ! Lift coefficient
         real*8 :: Omega = 0.0d0 ! Amount of linear twist, in radians
+        real*8 :: AileronDeflection = 0.0d0 ! Aileron deflection, in radians
+        real*8 :: RollingRate = 0.0d0 ! Dimensionless rolling rate (constant over wingspan)
+        real*8 :: FlapEffectiveness = 0.445d0 ! Section flap effectiveness (constant over wingspan)
         logical :: SpecifyAlpha = .true. ! Was alpha specified?
                                          ! .true.  = Use desired alpha to calculate CL
                                          ! .false. = Use desired CL to calculate alpha

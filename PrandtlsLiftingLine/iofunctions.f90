@@ -31,6 +31,10 @@ contains
             end if
             write(6, '(4x, a, f11.7, a)') "S - Edit section lift slope (", &
                 & pf%LiftSlope, " )"
+            write(6, '(4x, a, f7.4, a)') "H - Edit location of aileron root (z/b = ", &
+                & pf%AileronRoot, " )"
+            write(6, '(4x, a, f7.4, a)') "J - Edit location of aileron tip (z/b = ", &
+                & pf%AileronTip, " )"
 
             ! Output options
             write(6, *)
@@ -55,6 +59,12 @@ contains
                 & pf%LiftCoefficient, " )"
             write(6, '(4x, a, f7.4, a)') "L - Edit amount of linear twist (", &
                 & pf%Omega * 180.0d0 / pi, " deg )"
+            write(6, '(4x, a, f7.4, a)') "D - Edit the aileron deflection (", &
+                & pf%AileronDeflection * 180.0d0 / pi, " deg )"
+            write(6, '(4x, a, f7.4, a)') "P - Edit dimensionless rolling rate (", &
+                & pf%RollingRate, " )"
+            write(6, '(4x, a, f7.4, a)') "E - Edit section flap effectiveness (", &
+                & pf%FlapEffectiveness, " )"
 
             ! Main Execution commands
             write(6, *)
@@ -90,6 +100,10 @@ contains
             call EditTaperRatio(pf)
         else if (input == 'S') then
             call EditLiftSlope(pf)
+        else if (input == 'H') then
+            call EditAileronRoot(pf)
+        else if (input == 'J') then
+            call EditAileronTip(pf)
 
         ! Output options
         else if (input == 'C') then
@@ -110,6 +124,12 @@ contains
             call EditLiftCoefficient(pf)
         else if (input == 'L') then
             call EditOmega(pf)
+        else if (input == 'D') then
+            call EditAileronDeflection(pf)
+        else if (input == 'P') then
+            call EditRollingRate(pf)
+        else if (input == 'E') then
+            call EditFlapEffectiveness(pf)
 
         ! Main Execution Commands
         else if (input == 'R') then
@@ -180,6 +200,24 @@ contains
         pf%LiftSlope = GetRealInput()
     end subroutine EditLiftSlope
 
+    subroutine EditAileronRoot(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter z/b for aileron root location:"
+
+        pf%AileronRoot = GetRealInput()
+    end subroutine EditAileronRoot
+
+    subroutine EditAileronTip(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter z/b for aileron tip location:"
+
+        pf%AileronTip = GetRealInput()
+    end subroutine EditAileronTip
+
     subroutine EditFileName(pf)
         type(Planform), intent(inout) :: pf
 
@@ -225,6 +263,33 @@ contains
 
         pf%Omega = GetRealInput() * pi / 180.0d0
     end subroutine EditOmega
+
+    subroutine EditAileronDeflection(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter the aileron deflection (degrees):"
+
+        pf%AileronDeflection = GetRealInput() * pi / 180.0d0
+    end subroutine EditAileronDeflection
+
+    subroutine EditRollingRate(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter the dimensionless rolling rate:"
+
+        pf%RollingRate = GetRealInput()
+    end subroutine EditRollingRate
+
+    subroutine EditFlapEffectiveness(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter the section flap effectiveness:"
+
+        pf%FlapEffectiveness = GetRealInput()
+    end subroutine EditFlapEffectiveness
 
     character function GetCharInput() result(input)
         read(5, '(a)') input

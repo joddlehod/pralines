@@ -7,10 +7,13 @@ contains
     subroutine RunSimulation(pf)
         type(Planform), intent(inout) :: pf
 
-        real*8 :: c(pf%NNodes, pf%NNodes)
-        real*8 :: c_inv(pf%NNodes, pf%NNodes)
+        real*8 :: cmatrix(pf%NNodes, pf%NNodes)
+        real*8 :: cmatrix_inv(pf%NNodes, pf%NNodes)
         real*8 :: a(pf%NNodes)
         real*8 :: b(pf%NNodes)
+        real*8 :: c(pf%NNodes)
+        real*8 :: d(pf%NNodes)
+        real*8 :: bigA(pf%NNodes)
         logical :: print_to_file
 
         print_to_file = (pf%WriteCMatrix .or. pf%WriteCInverse &
@@ -24,11 +27,14 @@ contains
             call PrintPlanformSummary(10, pf)
         end if
 
-        call ComputeC(pf, c)
-        call ComputeCInverse(pf, c, c_inv)
-        call ComputeFourierCoefficients_a(pf, c_inv, a)
-        call ComputeFourierCoefficients_b(pf, c_inv, b)
-        call ComputeWingCoefficients(pf, a, b)
+        call ComputeC(pf, cmatrix)
+        call ComputeCInverse(pf, cmatrix, cmatrix_inv)
+        call ComputeFourierCoefficients_a(pf, cmatrix_inv, a)
+        call ComputeFourierCoefficients_b(pf, cmatrix_inv, b)
+        call ComputeFourierCoefficients_c(pf, cmatrix_inv, c)
+        call ComputeFourierCoefficients_d(pf, cmatrix_inv, d)
+        call ComputeBigACoefficients(pf, a, b, c, d, bigA)
+        call ComputeWingCoefficients(pf, a, b, c, d, bigA)
 
         if (print_to_file) then
             close(unit=10)
@@ -72,9 +78,9 @@ contains
         write(u, *)
     end subroutine PrintPlanformSummary
 
-    subroutine ComputeFourierCoefficients_a(pf, c_inv, a)
+    subroutine ComputeFourierCoefficients_a(pf, cmatrix_inv, a)
         type(Planform), intent(in) :: pf
-        real*8, intent(in) :: c_inv(pf%NNodes, pf%NNodes)
+        real*8, intent(in) :: cmatrix_inv(pf%NNodes, pf%NNodes)
         real*8, intent(out) :: a(pf%NNodes)
 
         real*8 :: ones(pf%NNodes)
@@ -88,7 +94,7 @@ contains
             ones(nnodes) = 0.0d0
         end if
 
-        a = matmul(c_inv, ones)
+        a = matmul(cmatrix_inv, ones)
 
         call PrintFourierCoefficients(6, nnodes, "a", a)
         if (pf%WriteFourier) then
@@ -96,9 +102,9 @@ contains
         end if
     end subroutine ComputeFourierCoefficients_a
 
-    subroutine ComputeFourierCoefficients_b(pf, c_inv, b)
+    subroutine ComputeFourierCoefficients_b(pf, cmatrix_inv, b)
         type(Planform), intent(in) :: pf
-        real*8, intent(in) :: c_inv(pf%NNodes, pf%NNodes)
+        real*8, intent(in) :: cmatrix_inv(pf%NNodes, pf%NNodes)
         real*8, intent(out) :: b(pf%NNodes)
 
         real*8 :: omega(pf%NNodes)
@@ -112,13 +118,72 @@ contains
             omega(nnodes) = 0.0d0
         end if
 
-        b = matmul(c_inv, omega)
+        b = matmul(cmatrix_inv, omega)
 
         call PrintFourierCoefficients(6, nnodes, "b", b)
         if (pf%WriteFourier) then
             call PrintFourierCoefficients(10, nnodes, "b", b)
         end if
     end subroutine ComputeFourierCoefficients_b
+
+    subroutine ComputeFourierCoefficients_c(pf, cmatrix_inv, c)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: cmatrix_inv(pf%NNodes, pf%NNodes)
+        real*8, intent(out) :: c(pf%NNodes)
+
+        real*8 :: chi(pf%NNodes)
+        real*8 :: zbi
+        integer :: i
+        integer :: nnodes
+
+        nnodes = pf%NNodes
+        do i = 1, nnodes
+            zbi = z_over_b(i, nnodes)
+            if (zbi > pf%AileronRoot .and. zbi < pf%AileronTip) then
+                chi(i) = -pf%FlapEffectiveness
+            else if (zbi < -pf%AileronRoot .and. zbi > -pf%AileronTip) then
+                chi(i) = pf%FlapEffectiveness
+            else
+                chi(i) = 0.0d0
+            end if
+        end do
+
+        if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+            chi(1) = 0.0d0
+            chi(nnodes) = 0.0d0
+        end if
+
+        c = matmul(cmatrix_inv, chi)
+
+        call PrintFourierCoefficients(6, nnodes, "c", c)
+        if (pf%WriteFourier) then
+            call PrintFourierCoefficients(10, nnodes, "c", c)
+        end if
+    end subroutine ComputeFourierCoefficients_c
+
+    subroutine ComputeFourierCoefficients_d(pf, cmatrix_inv, d)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: cmatrix_inv(pf%NNodes, pf%NNodes)
+        real*8, intent(out) :: d(pf%NNodes)
+
+        real*8 :: cos_theta(pf%NNodes)
+        integer :: i
+        integer :: nnodes
+
+        nnodes = pf%NNodes
+        cos_theta = (/ (cos(theta(i, nnodes)), i=1, nnodes) /)
+        if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+            cos_theta(1) = 0.0d0
+            cos_theta(nnodes) = 0.0d0
+        end if
+
+        d = matmul(cmatrix_inv, cos_theta)
+
+        call PrintFourierCoefficients(6, nnodes, "d", d)
+        if (pf%WriteFourier) then
+            call PrintFourierCoefficients(10, nnodes, "d", d)
+        end if
+    end subroutine ComputeFourierCoefficients_d
 
     subroutine PrintFourierCoefficients(u, nnodes, name, fc)
         integer, intent(in) :: u
@@ -135,10 +200,13 @@ contains
         write(u, *)
     end subroutine PrintFourierCoefficients
 
-    subroutine ComputeWingCoefficients(pf, a, b)
+    subroutine ComputeWingCoefficients(pf, a, b, c, d, bigA)
         type(Planform), intent(inout) :: pf
         real*8, intent(in) :: a(pf%NNodes)
         real*8, intent(in) :: b(pf%NNodes)
+        real*8, intent(in) :: c(pf%NNodes)
+        real*8, intent(in) :: d(pf%NNodes)
+        real*8, intent(in) :: bigA(pf%NNodes)
 
         real*8 :: kl   ! Lift slope factor
         real*8 :: ew   ! Washout effectiveness (epsilon_omega)
@@ -152,6 +220,11 @@ contains
         real*8 :: es   ! Span efficiency factor
         real*8 :: cdi  ! Wing induced drag coefficient
 
+        real*8 :: crmda ! Change in rolling moment coefficient with respect to aileron deflection
+        real*8 :: crmpbar ! Change in rolling moment with respect to rolling rate
+        real*8 :: crm  ! Rolling moment coefficient
+        real*8 :: cym  ! Yawing moment coefficient
+
         kl = Kappa_L(pf%AspectRatio, pf%LiftSlope, a(1))
         ew = Epsilon_Omega(a(1), b(1))
         cla = C_L_alpha(pf%AspectRatio, a(1))
@@ -159,9 +232,11 @@ contains
         if (pf%SpecifyAlpha) then
             cl = C_L(cla, pf%AngleOfAttack, ew, pf%Omega)
             pf%LiftCoefficient = cl
+            alpha = pf%AngleOfAttack
         else
             alpha = RootAlpha(cla, pf%LiftCoefficient, ew, pf%Omega)
             pf%AngleOfAttack = alpha
+            cl = pf%LiftCoefficient
         end if
 
         kd = Kappa_D(pf%NNodes, a)
@@ -170,13 +245,18 @@ contains
         kdw = Kappa_DOmega(pf%NNodes, a, b)
         cdi = C_Di(cl, kd, kdl, cla, pf%Omega, kdw, pf%AspectRatio)
 
-        call PrintWingCoefficients(6, kl, ew, cla, cl, kd, kdl, kdw, es, cdi)
+        crmda = CRM_dAlpha(pf%AspectRatio, c(2))
+        crmpbar = CRM_PBar(pf%AspectRatio, d(2))
+        crm = CRoll(crmda, crmpbar, pf%AileronDeflection, pf%RollingRate)
+        cym = CYaw(pf, cl, bigA)
+
+        call PrintWingCoefficients(6, kl, ew, cla, cl, kd, kdl, kdw, es, cdi, crmda, crmpbar, crm, cym)
         if (pf%WriteOther) then
-            call PrintWingCoefficients(10, kl, ew, cla, cl, kd, kdl, kdw, es, cdi)
+            call PrintWingCoefficients(10, kl, ew, cla, cl, kd, kdl, kdw, es, cdi, crmda, crmpbar, crm, cym)
         end if
     end subroutine ComputeWingCoefficients
 
-    subroutine PrintWingCoefficients(u, kl, ew, cla, cl, kd, kdl, kdw, es, cdi)
+    subroutine PrintWingCoefficients(u, kl, ew, cla, cl, kd, kdl, kdw, es, cdi, crmda, crmpbar, crm, cym)
         integer, intent(in) :: u   ! Output unit (6 = standard output)
         real*8, intent(in) :: kl   ! Lift slope factor
         real*8, intent(in) :: ew   ! Washout effectiveness (epsilon_omega)
@@ -188,6 +268,11 @@ contains
         real*8, intent(in) :: kdw  ! Washout contribution to induced drag
         real*8, intent(in) :: es   ! Span efficiency factor
         real*8, intent(in) :: cdi  ! Wing induced drag coefficient
+
+        real*8, intent(in) :: crmda    ! Change in rolling moment coefficient with respect to flap deflection
+        real*8, intent(in) :: crmpbar  ! Change in rolling moment coefficient with respect to rolling rate
+        real*8, intent(in) :: crm      ! Rolling moment coefficient
+        real*8, intent(in) :: cym      ! Yawing moment coefficient
 
         write(u, '(a, ES22.15)') "KL  = ", kl
         write(u, '(a, ES22.15)') "CLa = ", cla
@@ -201,7 +286,28 @@ contains
         write(u, '(a, ES22.15)') "es  = ", es
         write(u, '(a, ES22.15)') "CDi = ", cdi
         write(u, *)
+
+        write(u, '(a, ES22.15)') "Cl,da = ", crmda
+        write(u, '(a, ES22.15)') "Cl,pbar = ", crmpbar
+        write(u, '(a, ES22.15)') "Croll = ", crm
+        write(u, '(a, ES22.15)') "Cyaw = ", cym
     end subroutine PrintWingCoefficients
+
+    subroutine ComputeBigACoefficients(pf, a, b, c, d, bigA)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: a(pf%NNodes)
+        real*8, intent(in) :: b(pf%NNodes)
+        real*8, intent(in) :: c(pf%NNodes)
+        real*8, intent(in) :: d(pf%NNodes)
+        real*8, intent(out) :: bigA(pf%NNodes)
+
+        integer :: i
+
+        do i = 1, pf%NNodes
+            bigA(i) = a(i) * pf%AngleOfAttack - b(i) * pf%Omega + &
+                & c(i) * pf%AileronDeflection + d(i) * pf%RollingRate
+        end do
+    end subroutine ComputeBigACoefficients
 
     real*8 function Kappa_L(ra, cla_section, a1) result(kl)
         real*8, intent(in) :: ra
@@ -288,6 +394,47 @@ contains
         end do
         kdw = kdw * (b(1) / a(1))**2
     end function Kappa_DOmega
+
+    real*8 function CRM_dAlpha(ra, c2) result(crmda)
+        real*8, intent(in) :: ra
+        real*8, intent(in) :: c2
+
+        crmda = -pi * ra / 4.0d0 * c2
+    end function CRM_dAlpha
+
+    real*8 function CRM_PBar(ra, d2) result(crmpbar)
+        real*8, intent(in) :: ra
+        real*8, intent(in) :: d2
+
+        crmpbar = -pi * ra / 4.0d0 * d2
+    end function CRM_PBar
+
+    real*8 function CRoll(crmda, crmpbar, da, pbar) result(crm)
+        real*8, intent(in) :: crmda
+        real*8, intent(in) :: crmpbar
+        real*8, intent(in) :: da
+        real*8, intent(in) :: pbar
+
+        crm = crmda * da + crmpbar * pbar
+    end function CRoll
+
+    real*8 function CYaw(pf, cl, bigA) result(cym)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: cl
+        real*8, intent(in) :: bigA(pf%NNodes)
+
+        integer :: i
+        integer :: nnodes
+        nnodes = pf%NNodes
+
+        cym = cl / 8.0d0 * (6.0d0 * bigA(2) - pf%RollingRate) + &
+            & pi * pf%AspectRatio / 8.0d0 * (10.0d0 * bigA(2) - &
+            & pf%RollingRate) * bigA(3)
+        do i = 4, nnodes
+            cym = cym + pi * pf%AspectRatio / 4.0d0 * (2.0d0 * real(i, 8) - &
+                & 1.0d0) * bigA(i-1) * bigA(i)
+        end do
+    end function CYaw
 
     real*8 function C_Di(cl, kd, kdl, cla, omega, kdw, ra) result (cdi)
         real*8, intent(in) :: cl

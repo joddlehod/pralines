@@ -1,17 +1,11 @@
 # depslib dependency file v1.0
-1381539080 source:c:\users\joshhodson\source\repos\homeworke6\main.f90
+1381771502 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\matrix.f90
 
-1381539835 source:c:\users\joshhodson\source\repos\homeworke6\class_planform.f90
+1382552153 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\class_planform.f90
 
-1381544407 source:c:\users\joshhodson\source\repos\homeworke6\iofunctions.f90
+1382553475 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\liftinglinesolver.f90
 
-1381972626 source:c:\users\joshhodson\source\repos\prandtlsliftingline\homeworke6\class_planform.f90
+1382552153 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\iofunctions.f90
 
-1381974255 source:c:\users\joshhodson\source\repos\prandtlsliftingline\homeworke6\iofunctions.f90
-
-1381971294 source:c:\users\joshhodson\source\repos\prandtlsliftingline\homeworke6\main.f90
-
-1381974169 source:c:\users\joshhodson\source\repos\prandtlsliftingline\homeworke6\liftinglinesolver.f90
-
-1381771502 source:c:\users\joshhodson\source\repos\prandtlsliftingline\homeworke6\matrix.f90
+1381971294 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\main.f90
 
