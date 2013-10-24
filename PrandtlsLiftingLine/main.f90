@@ -6,6 +6,7 @@ program hello
     implicit none
 
     type(Planform) :: pf
+    call CalculateAileronTipFlapFraction(pf)
     call RunSimulation(pf)
 
     !Begin execution

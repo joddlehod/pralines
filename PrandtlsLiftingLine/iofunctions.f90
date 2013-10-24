@@ -35,6 +35,13 @@ contains
                 & pf%AileronRoot, " )"
             write(6, '(4x, a, f7.4, a)') "J - Edit location of aileron tip (z/b = ", &
                 & pf%AileronTip, " )"
+            write(6, '(4x, a, f7.4, a)') "M - Edit the flap fraction at the aileron root (cf/c = ", &
+                & pf%FlapFractionRoot, " )"
+            write(6, '(4x, a, f7.4, a)') "U - Edit the flap fraction at the aileron tip (cf/c = ", &
+                & pf%FlapFractionTip, " )"
+            write(6, '(4x, a)') "V - Toggle calculation of flap fraction at aileron tip to make"
+            write(6, '(4x, 4x, a, l1, a)') "hinge line parallel with quarter-chord line ( ", &
+                & pf%ParallelHingeLine, " )"
 
             ! Output options
             write(6, *)
@@ -104,6 +111,12 @@ contains
             call EditAileronRoot(pf)
         else if (input == 'J') then
             call EditAileronTip(pf)
+        else if (input == 'M') then
+            call EditFlapFractionRoot(pf)
+        else if (input == 'U') then
+            call EditFlapFractionTip(pf)
+        else if (input == 'V') then
+            call ToggleParallelHinge(pf)
 
         ! Output options
         else if (input == 'C') then
@@ -147,6 +160,8 @@ contains
         else if (pf%WingType == Elliptic) then
             pf%WingType = Tapered
         end if
+
+        call CalculateAileronTipFlapFraction(pf)
     end subroutine ToggleWingType
 
     subroutine EditNodes(pf)
@@ -189,6 +204,8 @@ contains
         if (tratio >= 0.0) then
             pf%TaperRatio = tratio
         end if
+
+        call CalculateAileronTipFlapFraction(pf)
     end subroutine EditTaperRatio
 
     subroutine EditLiftSlope(pf)
@@ -207,6 +224,7 @@ contains
         write(6, '(a)') "Enter z/b for aileron root location:"
 
         pf%AileronRoot = GetRealInput()
+        call CalculateAileronTipFlapFraction(pf)
     end subroutine EditAileronRoot
 
     subroutine EditAileronTip(pf)
@@ -216,7 +234,38 @@ contains
         write(6, '(a)') "Enter z/b for aileron tip location:"
 
         pf%AileronTip = GetRealInput()
+        call CalculateAileronTipFlapFraction(pf)
     end subroutine EditAileronTip
+
+    subroutine EditFlapFractionRoot(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter cf/c at aileron root:"
+
+        pf%FlapFractionRoot = GetRealInput()
+        call CalculateAileronTipFlapFraction(pf)
+    end subroutine EditFlapFractionRoot
+
+    subroutine EditFlapFractionTip(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        if (pf%ParallelHingeLine) then
+            pf%ParallelHingeLine = .false.
+            write(6, '(a)') "NOTE: Calculation of flap fraction at aileron tip has been turned off."
+        end if
+        write(6, '(a)') "Enter cf/c at aileron tip:"
+
+        pf%FlapFractionTip = GetRealInput()
+    end subroutine EditFlapFractionTip
+
+    subroutine ToggleParallelHinge(pf)
+        type(Planform), intent(inout) :: pf
+
+        pf%ParallelHingeLine = .not. pf%ParallelHingeLine
+        call CalculateAileronTipFlapFraction(pf)
+    end subroutine ToggleParallelHinge
 
     subroutine EditFileName(pf)
         type(Planform), intent(inout) :: pf

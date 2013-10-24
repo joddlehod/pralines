@@ -19,6 +19,11 @@ module class_Planform
         real*8 :: LiftSlope = 2.0d0 * pi ! Section lift slope
         real*8 :: AileronRoot = 0.25d0 ! Location of aileron root (z/b)
         real*8 :: AileronTip = 0.45d0 ! Location of aileron tip (z/b)
+        real*8 :: FlapFractionRoot = 0.25d0 ! Flap fraction at aileron root (cf/c)
+        real*8 :: FlapFractionTip = 0.25d0 ! Flap fraction at aileron tip (cf/c)
+        logical :: ParallelHingeLine = .true. ! Is the hinge line parallel to the
+                                              ! quarter-chord line? When true,
+                                              ! FlapFractionTip will be calculated
 
         ! Output Options
         logical :: WriteCMatrix = .true.  ! Write C Matrix to output file?
@@ -47,18 +52,115 @@ module class_Planform
     end type Planform
 
     contains
-        function GetWingType(this) result(name)
-            type(Planform) :: this
+        function GetWingType(pf) result(name)
+            type(Planform), intent(in) :: pf
             character*8 :: name
 
-            if (this%WingType .eq. Tapered) then
+            if (pf%WingType .eq. Tapered) then
                 name = "Tapered"
-            else if (this%WingType .eq. Elliptic) then
+            else if (pf%WingType .eq. Elliptic) then
                 name = "Elliptic"
             else
                 name = "Unknown"
             end if
         end function GetWingType
+
+        real*8 function theta_i(i, nnodes) result(theta)
+            integer, intent(in) :: i
+            integer, intent(in) :: nnodes
+
+            if (i < 1 .or. i > nnodes) then
+                write(6, '(a, f7.4)') "ERROR: Function theta_i called with i = ", i
+                if (i < 1) then
+                    theta = 0.0d0
+                else
+                    theta = pi
+                end if
+            else
+                theta = real(i-1, 8) / real(nnodes - 1, 8) * pi
+            end if
+        end function theta_i
+
+        real*8 function theta_zb(zb) result(theta)
+            real*8, intent(in) :: zb  ! z/b
+
+            if (zb < -0.5d0 .or. zb > 0.5d0) then
+                write(6, '(a, f7.4)') "ERROR: Function theta_d called with z/b = ", zb
+                if (zb < -0.5d0) then
+                    theta = 0.0d0
+                else
+                    theta = pi
+                end if
+            else
+                theta = acos(-2.0d0 * zb)
+            end if
+        end function theta_zb
+
+        real*8 function c_over_b_i(pf, i) result(cb)
+            type(Planform), intent(in) :: pf
+            integer, intent(in) :: i
+
+            real*8 :: theta
+
+            theta = theta_i(i, pf%NNodes)
+            cb = c_over_b(pf, theta)
+        end function c_over_b_i
+
+        real*8 function c_over_b_zb(pf, zb) result(cb)
+            type(Planform), intent(in) :: pf
+            real*8, intent(in) :: zb  ! z/b
+
+            real*8 :: theta
+
+            theta = theta_zb(zb)
+            cb = c_over_b(pf, theta)
+        end function c_over_b_zb
+
+        real*8 function c_over_b(pf, theta) result(cb)
+            type(Planform), intent(in) :: pf
+            real*8, intent(in) :: theta
+
+            if (pf%WingType == Tapered) then
+                ! Calculate c/b for tapered wing
+                cb = (2.0d0 * (1.0d0 - (1.0d0 - pf%TaperRatio) * &
+                    & dabs(cos(theta)))) / (pf%AspectRatio * (1.0d0 + pf%TaperRatio))
+            else if (pf%WingType == Elliptic) then
+                ! Calculate c/b for elliptic wing
+                cb = (4.0d0 * sin(theta)) / &
+                    & (pi * pf%AspectRatio)
+            else
+                ! Unknown wing type!
+                stop "*** Unknown Wing Type ***"
+            end if
+        end function c_over_b
+
+        real*8 function z_over_b_i(i, nnodes) result(zb)
+            integer, intent(in) :: i
+            integer, intent(in) :: nnodes
+
+            zb = z_over_b(theta_i(i, nnodes))
+        end function z_over_b_i
+
+        real*8 function z_over_b(theta) result(zb)
+            real*8, intent(in) :: theta
+
+            zb = -0.5d0 * cos(theta)
+        end function z_over_b
+
+        subroutine CalculateAileronTipFlapFraction(pf)
+            type(Planform), intent(inout) :: pf
+
+            real*8 :: cb_root, cfc_root
+            real*8 :: cb_tip, cfc_tip
+
+            if (pf%ParallelHingeLine) then
+                cb_root = c_over_b_zb(pf, pf%AileronRoot)
+                cfc_root = pf%FlapFractionRoot
+                cb_tip = c_over_b_zb(pf, pf%AileronTip)
+                cfc_tip = 0.75d0 - cb_root / cb_tip * (0.75d0 - cfc_root)
+                pf%FlapFractionTip = cfc_tip
+            end if
+        end subroutine CalculateAileronTipFlapFraction
 
 end module class_Planform
 

@@ -112,7 +112,7 @@ contains
         integer :: nnodes
 
         nnodes = pf%NNodes
-        omega = (/ (dabs(cos(theta(i, nnodes))), i=1, nnodes) /)
+        omega = (/ (dabs(cos(theta_i(i, nnodes))), i=1, nnodes) /)
         if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
             omega(1) = 0.0d0
             omega(nnodes) = 0.0d0
@@ -138,7 +138,7 @@ contains
 
         nnodes = pf%NNodes
         do i = 1, nnodes
-            zbi = z_over_b(i, nnodes)
+            zbi = z_over_b_i(i, nnodes)
             if (zbi > pf%AileronRoot .and. zbi < pf%AileronTip) then
                 chi(i) = -pf%FlapEffectiveness
             else if (zbi < -pf%AileronRoot .and. zbi > -pf%AileronTip) then
@@ -171,7 +171,7 @@ contains
         integer :: nnodes
 
         nnodes = pf%NNodes
-        cos_theta = (/ (cos(theta(i, nnodes)), i=1, nnodes) /)
+        cos_theta = (/ (cos(theta_i(i, nnodes)), i=1, nnodes) /)
         if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
             cos_theta(1) = 0.0d0
             cos_theta(nnodes) = 0.0d0
@@ -449,43 +449,6 @@ contains
             & kdw * (cla * omega)**2) / (pi * ra)
     end function C_Di
 
-    real*8 function theta(i, nnodes) result(theta_i)
-        integer, intent(in) :: i
-        integer, intent(in) :: nnodes
-
-        theta_i = real(i - 1, 8) * pi / real(nnodes - 1, 8)
-    end function theta
-
-    real*8 function c_over_b(i, pf) result(c_over_b_i)
-        integer, intent(in) :: i
-        type(Planform), intent(in) :: pf
-
-        real*8 :: theta_i
-
-        theta_i = theta(i, pf%NNodes)
-
-        if (pf%WingType == Tapered) then
-            ! Calculate c/b for tapered wing
-            c_over_b_i = (2.0d0 * (1.0d0 - (1.0d0 - pf%TaperRatio) * &
-                & dabs(cos(theta_i)))) / (pf%AspectRatio * (1.0d0 + pf%TaperRatio))
-        else if (pf%WingType == Elliptic) then
-            ! Calculate c/b for elliptic wing
-            c_over_b_i = (4.0d0 * sin(theta(i, pf%NNodes))) / &
-                & (pi * pf%AspectRatio)
-        else
-            ! Unknown wing type!
-            stop "*** Unknown Wing Type ***"
-        end if
-
-    end function c_over_b
-
-    real*8 function z_over_b(i, nnodes) result(z_over_b_i)
-        integer, intent(in) :: i
-        integer, intent(in) :: nnodes
-
-        z_over_b_i = -0.5d0 * cos(theta(i, nnodes))
-    end function z_over_b
-
     subroutine ComputeC(pf, c)
         type(Planform), intent(in) :: pf
         real*8, intent(inout) :: c(pf%NNodes, pf%NNodes)
@@ -551,7 +514,7 @@ contains
         integer :: j
         integer :: jsq
         integer :: nnode
-        real*8 :: c_over_b_1
+        real*8 :: cb1
 
         nnode = pf%NNodes
         do j = 1, nnode
@@ -560,8 +523,8 @@ contains
             c(nnode, j) = real((-1)**(j + 1) * jsq, 8)
         end do
 
-        c_over_b_1 = c_over_b(1, pf)
-        if (dabs(c_over_b_1) < 1.0d-10) then
+        cb1 = c_over_b_i(pf, 1)
+        if (dabs(cb1) < 1.0d-10) then
             call C1j_Nj_zero_chord(c, pf)
         end if
 
@@ -574,18 +537,18 @@ contains
 
         integer :: j
         integer :: nnode
-        real*8 :: theta_i
-        real*8 :: c_over_b_i
-        real*8 :: sin_theta_i
+        real*8 :: theta
+        real*8 :: cb
+        real*8 :: sin_theta
 
         nnode = pf%NNodes
-        theta_i = theta(i, nnode)
-        c_over_b_i = c_over_b(i, pf)
-        sin_theta_i = sin(theta_i)
+        theta = theta_i(i, nnode)
+        cb = c_over_b_i(pf, i)
+        sin_theta = sin(theta)
 
         do j = 1, nnode
-            c(i, j) = (4.0d0 / (pf%LiftSlope * c_over_b_i) + &
-                & real(j, 8) / sin_theta_i) * sin(real(j, 8) * theta_i)
+            c(i, j) = (4.0d0 / (pf%LiftSlope * cb) + &
+                & real(j, 8) / sin_theta) * sin(real(j, 8) * theta)
         end do
     end subroutine Cij
 
