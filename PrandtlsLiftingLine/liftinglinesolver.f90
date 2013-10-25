@@ -140,9 +140,9 @@ contains
         do i = 1, nnodes
             zbi = z_over_b_i(i, nnodes)
             if (zbi > pf%AileronRoot .and. zbi < pf%AileronTip) then
-                chi(i) = -pf%FlapEffectiveness
+                chi(i) = -flap_effectiveness(pf, i)
             else if (zbi < -pf%AileronRoot .and. zbi > -pf%AileronTip) then
-                chi(i) = pf%FlapEffectiveness
+                chi(i) = flap_effectiveness(pf, i)
             else
                 chi(i) = 0.0d0
             end if

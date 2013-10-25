@@ -24,6 +24,8 @@ module class_Planform
         logical :: ParallelHingeLine = .true. ! Is the hinge line parallel to the
                                               ! quarter-chord line? When true,
                                               ! FlapFractionTip will be calculated
+        real*8 :: HingeEfficiency = 0.85d0 ! Aileron hinge efficiency
+        real*8 :: DeflectionEfficiency = 1.0d0 ! Aileron deflection efficiency
 
         ! Output Options
         logical :: WriteCMatrix = .true.  ! Write C Matrix to output file?
@@ -44,7 +46,6 @@ module class_Planform
         real*8 :: Omega = 0.0d0 ! Amount of linear twist, in radians
         real*8 :: AileronDeflection = 0.0d0 ! Aileron deflection, in radians
         real*8 :: RollingRate = 0.0d0 ! Dimensionless rolling rate (constant over wingspan)
-        real*8 :: FlapEffectiveness = 0.445d0 ! Section flap effectiveness (constant over wingspan)
         logical :: SpecifyAlpha = .true. ! Was alpha specified?
                                          ! .true.  = Use desired alpha to calculate CL
                                          ! .false. = Use desired CL to calculate alpha
@@ -146,6 +147,44 @@ module class_Planform
 
             zb = -0.5d0 * cos(theta)
         end function z_over_b
+
+        real*8 function cf_over_c_i(pf, i) result(cfc)
+            type(Planform), intent(in) :: pf
+            integer, intent(in) :: i
+
+            real*8 :: zb_root, cfc_root, theta_root, cb_root, y_root
+            real*8 :: zb_tip, cfc_tip, theta_tip, cb_tip, y_tip
+            real*8 :: y, slope, offst
+
+            zb_root = pf%AileronRoot
+            cfc_root = pf%FlapFractionRoot
+            theta_root = theta_zb(zb_root)
+            cb_root = c_over_b(pf, theta_root)
+            y_root = (cfc_root - 0.75d0) * cb_root
+
+            zb_tip = pf%AileronTip
+            cfc_tip = pf%FlapFractionRoot
+            theta_tip = theta_zb(zb_tip)
+            cb_tip = c_over_b(pf, theta_tip)
+            y_tip = (cfc_tip - 0.75d0) * cb_tip
+
+            slope = (y_tip - y_root) / (zb_tip - zb_root)
+            offst = y_root - slope * zb_root
+
+            y = slope * z_over_b_i(i, pf%NNodes) + offst
+            cfc = y / c_over_b_i(pf, i) + 0.75d0
+        end function cf_over_c_i
+
+        real*8 function flap_effectiveness(pf, i) result(eps_f)
+            type(Planform), intent(in) :: pf
+            integer, intent(in) :: i
+
+            real*8 :: theta_f, eps_fi
+
+            theta_f = acos(2.0d0 * cf_over_c_i(pf, i) - 1.0d0)
+            eps_fi = 1.0d0 - (theta_f - sin(theta_f)) / pi
+            eps_f = eps_fi * pf%HingeEfficiency * pf%DeflectionEfficiency
+        end function flap_effectiveness
 
         subroutine CalculateAileronTipFlapFraction(pf)
             type(Planform), intent(inout) :: pf

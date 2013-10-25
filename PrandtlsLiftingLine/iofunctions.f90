@@ -42,6 +42,10 @@ contains
             write(6, '(4x, a)') "V - Toggle calculation of flap fraction at aileron tip to make"
             write(6, '(4x, 4x, a, l1, a)') "hinge line parallel with quarter-chord line ( ", &
                 & pf%ParallelHingeLine, " )"
+            write(6, '(4x, a, f7.4, a)') "X - Edit aileron hinge efficiency ( ", &
+                & pf%HingeEfficiency, " )"
+            write(6, '(4x, a, f7.4, a)') "Y - Edit aileron deflection efficiency ( ", &
+                & pf%DeflectionEfficiency, " )"
 
             ! Output options
             write(6, *)
@@ -70,8 +74,6 @@ contains
                 & pf%AileronDeflection * 180.0d0 / pi, " deg )"
             write(6, '(4x, a, f7.4, a)') "P - Edit dimensionless rolling rate (", &
                 & pf%RollingRate, " )"
-            write(6, '(4x, a, f7.4, a)') "E - Edit section flap effectiveness (", &
-                & pf%FlapEffectiveness, " )"
 
             ! Main Execution commands
             write(6, *)
@@ -117,6 +119,10 @@ contains
             call EditFlapFractionTip(pf)
         else if (input == 'V') then
             call ToggleParallelHinge(pf)
+        else if (input == 'X') then
+            call EditHingeEfficiency(pf)
+        else if (input == 'Y') then
+            call EditDeflectionEfficiency(pf)
 
         ! Output options
         else if (input == 'C') then
@@ -141,8 +147,6 @@ contains
             call EditAileronDeflection(pf)
         else if (input == 'P') then
             call EditRollingRate(pf)
-        else if (input == 'E') then
-            call EditFlapEffectiveness(pf)
 
         ! Main Execution Commands
         else if (input == 'R') then
@@ -267,6 +271,24 @@ contains
         call CalculateAileronTipFlapFraction(pf)
     end subroutine ToggleParallelHinge
 
+    subroutine EditHingeEfficiency(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter aileron hinge efficiency:"
+
+        pf%HingeEfficiency = GetRealInput()
+    end subroutine EditHingeEfficiency
+
+    subroutine EditDeflectionEfficiency(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Enter aileron deflection efficiency:"
+
+        pf%DeflectionEfficiency = GetRealInput()
+    end subroutine EditDeflectionEfficiency
+
     subroutine EditFileName(pf)
         type(Planform), intent(inout) :: pf
 
@@ -330,15 +352,6 @@ contains
 
         pf%RollingRate = GetRealInput()
     end subroutine EditRollingRate
-
-    subroutine EditFlapEffectiveness(pf)
-        type(Planform), intent(inout) :: pf
-
-        write(6, *)
-        write(6, '(a)') "Enter the section flap effectiveness:"
-
-        pf%FlapEffectiveness = GetRealInput()
-    end subroutine EditFlapEffectiveness
 
     character function GetCharInput() result(input)
         read(5, '(a)') input
