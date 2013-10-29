@@ -28,10 +28,7 @@ module class_Planform
         real*8 :: DeflectionEfficiency = 1.0d0 ! Aileron deflection efficiency
 
         ! Output Options
-        logical :: WriteCMatrix = .true.  ! Write C Matrix to output file?
-        logical :: WriteCInverse = .true.  ! Write Inv(C) Matrix to output file?
-        logical :: WriteFourier = .true.  ! Write Fourier coefficients?
-        logical :: WriteOther = .true.  ! Write KL, KD, eps, and lift slope?
+        logical :: OutputMatrices = .true.  ! Write C Matrix and Fourier coefficients to output file?
         character*80 :: FileName = "PrandtlsLiftingLine.out" ! Name of output file
 
         ! Operating Conditions
@@ -49,6 +46,30 @@ module class_Planform
         logical :: SpecifyAlpha = .true. ! Was alpha specified?
                                          ! .true.  = Use desired alpha to calculate CL
                                          ! .false. = Use desired CL to calculate alpha
+
+        ! Planform Calculations
+        real*8, allocatable, dimension(:,:) :: BigC, BigC_Inv
+        real*8, allocatable, dimension(:) :: a, b, c, d, BigA
+        logical :: IsAllocated = .false.
+
+        ! Lift Coefficient Calculations
+        real*8 :: KL  ! Lift slope factor
+        real*8 :: EW  ! Washout effectiveness (epsilon omega)
+        real*8 :: CLa ! Wing lift slope (derivative of CL with respect to alpha)
+
+        ! Drag Coefficient Calculations
+        real*8 :: KD  ! Induced drag factor
+        real*8 :: KDL ! Lift-washout contribution to induced drag
+        real*8 :: KDW ! Washout contribution to induced drag
+        real*8 :: ES  ! Span efficiency factor
+        real*8 :: CDi ! Induced drag coefficient
+
+        ! Roll/yaw calculations
+        real*8 :: CRM_da   ! Change in rolling moment coefficient with respect to alpha
+        real*8 :: CRM_pbar ! Change in rolling moment coefficient with respect to rolling rate
+        real*8 :: CRM      ! Rolling moment coefficient
+        real*8 :: CYM      ! Yawing moment coefficient
+
 
     end type Planform
 
@@ -152,30 +173,34 @@ module class_Planform
             type(Planform), intent(in) :: pf
             integer, intent(in) :: i
 
+            real*8 :: zb_i, cb_i
             real*8 :: zb_root, cfc_root, theta_root, cb_root, y_root
             real*8 :: zb_tip, cfc_tip, theta_tip, cb_tip, y_tip
             real*8 :: y, slope, offst
+
+            zb_i = z_over_b_i(i, pf%NNodes)
+            cb_i = c_over_b_i(pf, i)
 
             zb_root = pf%AileronRoot
             cfc_root = pf%FlapFractionRoot
             theta_root = theta_zb(zb_root)
             cb_root = c_over_b(pf, theta_root)
-            y_root = (cfc_root - 0.75d0) * cb_root
+            y_root = (0.75d0 - cfc_root) * cb_root
 
             zb_tip = pf%AileronTip
             cfc_tip = pf%FlapFractionRoot
             theta_tip = theta_zb(zb_tip)
             cb_tip = c_over_b(pf, theta_tip)
-            y_tip = (cfc_tip - 0.75d0) * cb_tip
+            y_tip = (0.75d0 - cfc_tip) * cb_tip
 
             slope = (y_tip - y_root) / (zb_tip - zb_root)
             offst = y_root - slope * zb_root
 
-            y = slope * z_over_b_i(i, pf%NNodes) + offst
-            cfc = y / c_over_b_i(pf, i) + 0.75d0
+            y = slope * dabs(zb_i) + offst
+            cfc = 0.75d0 - y / cb_i
         end function cf_over_c_i
 
-        real*8 function flap_effectiveness(pf, i) result(eps_f)
+        real*8 function FlapEffectiveness(pf, i) result(eps_f)
             type(Planform), intent(in) :: pf
             integer, intent(in) :: i
 
@@ -184,9 +209,9 @@ module class_Planform
             theta_f = acos(2.0d0 * cf_over_c_i(pf, i) - 1.0d0)
             eps_fi = 1.0d0 - (theta_f - sin(theta_f)) / pi
             eps_f = eps_fi * pf%HingeEfficiency * pf%DeflectionEfficiency
-        end function flap_effectiveness
+        end function FlapEffectiveness
 
-        subroutine CalculateAileronTipFlapFraction(pf)
+        subroutine ComputeAileronTipFlapFraction(pf)
             type(Planform), intent(inout) :: pf
 
             real*8 :: cb_root, cfc_root
@@ -199,7 +224,36 @@ module class_Planform
                 cfc_tip = 0.75d0 - cb_root / cb_tip * (0.75d0 - cfc_root)
                 pf%FlapFractionTip = cfc_tip
             end if
-        end subroutine CalculateAileronTipFlapFraction
+        end subroutine ComputeAileronTipFlapFraction
+
+        subroutine DeallocateArrays(pf)
+            type(Planform), intent(inout) :: pf
+
+            if (pf%IsAllocated) then
+                deallocate(pf%a)
+                deallocate(pf%b)
+                deallocate(pf%c)
+                deallocate(pf%d)
+                deallocate(pf%BigA)
+                deallocate(pf%BigC)
+                deallocate(pf%BigC_Inv)
+            end if
+        end subroutine DeallocateArrays
+
+        subroutine AllocateArrays(pf)
+            type(Planform), intent(inout) :: pf
+
+            if (pf%IsAllocated) call DeallocateArrays(pf)
+
+            allocate(pf%BigC(pf%NNodes, pf%NNodes))
+            allocate(pf%BigC_Inv(pf%NNodes, pf%NNodes))
+            allocate(pf%a(pf%NNodes))
+            allocate(pf%b(pf%NNodes))
+            allocate(pf%c(pf%NNodes))
+            allocate(pf%d(pf%NNodes))
+            allocate(pf%BigA(pf%NNodes))
+            pf%IsAllocated = .true.
+        end subroutine AllocateArrays
 
 end module class_Planform
 

@@ -1,15 +1,9 @@
-program hello
-    use class_Planform
-    use liftinglinesolver
-    use iofunctions
+program PrandtlsLiftingLine
+    use LiftingLineInterface
 
     implicit none
 
-    type(Planform) :: pf
-    call CalculateAileronTipFlapFraction(pf)
-    call RunSimulation(pf)
-
     !Begin execution
-    call MainPage(pf)
+    call InitApp()
 
 end program
