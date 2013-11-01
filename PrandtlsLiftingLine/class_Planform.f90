@@ -14,12 +14,12 @@ module class_Planform
         ! Wing Parameters
         integer :: WingType = Tapered ! Wing type
         integer :: NNodes = 7 ! Total number of nodes
-        real*8 :: AspectRatio = 8.0d0 ! Aspect ratio
+        real*8 :: AspectRatio = 5.56d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
         real*8 :: LiftSlope = 2.0d0 * pi ! Section lift slope
-        real*8 :: AileronRoot = 0.25d0 ! Location of aileron root (z/b)
-        real*8 :: AileronTip = 0.45d0 ! Location of aileron tip (z/b)
-        real*8 :: FlapFractionRoot = 0.25d0 ! Flap fraction at aileron root (cf/c)
+        real*8 :: AileronRoot = 0.253d0 ! Location of aileron root (z/b)
+        real*8 :: AileronTip = 0.438d0 ! Location of aileron tip (z/b)
+        real*8 :: FlapFractionRoot = 0.28d0 ! Flap fraction at aileron root (cf/c)
         real*8 :: FlapFractionTip = 0.25d0 ! Flap fraction at aileron tip (cf/c)
         logical :: ParallelHingeLine = .true. ! Is the hinge line parallel to the
                                               ! quarter-chord line? When true,
@@ -173,13 +173,17 @@ module class_Planform
             type(Planform), intent(in) :: pf
             integer, intent(in) :: i
 
+            cfc = 0.75d0 - y_i(pf, i) / c_over_b_i(pf, i)
+        end function cf_over_c_i
+
+        real*8 function y_i(pf, i) result(y)
+            type(Planform), intent(in) :: pf
+            integer, intent(in) :: i
+
             real*8 :: zb_i, cb_i
             real*8 :: zb_root, cfc_root, theta_root, cb_root, y_root
             real*8 :: zb_tip, cfc_tip, theta_tip, cb_tip, y_tip
-            real*8 :: y, slope, offst
-
-            zb_i = z_over_b_i(i, pf%NNodes)
-            cb_i = c_over_b_i(pf, i)
+            real*8 :: slope, offst
 
             zb_root = pf%AileronRoot
             cfc_root = pf%FlapFractionRoot
@@ -188,7 +192,7 @@ module class_Planform
             y_root = (0.75d0 - cfc_root) * cb_root
 
             zb_tip = pf%AileronTip
-            cfc_tip = pf%FlapFractionRoot
+            cfc_tip = pf%FlapFractionTip
             theta_tip = theta_zb(zb_tip)
             cb_tip = c_over_b(pf, theta_tip)
             y_tip = (0.75d0 - cfc_tip) * cb_tip
@@ -196,9 +200,9 @@ module class_Planform
             slope = (y_tip - y_root) / (zb_tip - zb_root)
             offst = y_root - slope * zb_root
 
+            zb_i = z_over_b_i(i, pf%NNodes)
             y = slope * dabs(zb_i) + offst
-            cfc = 0.75d0 - y / cb_i
-        end function cf_over_c_i
+        end function y_i
 
         real*8 function FlapEffectiveness(pf, i) result(eps_f)
             type(Planform), intent(in) :: pf
@@ -211,20 +215,20 @@ module class_Planform
             eps_f = eps_fi * pf%HingeEfficiency * pf%DeflectionEfficiency
         end function FlapEffectiveness
 
-        subroutine ComputeAileronTipFlapFraction(pf)
+        subroutine ComputeAileronRootFlapFraction(pf)
             type(Planform), intent(inout) :: pf
 
             real*8 :: cb_root, cfc_root
             real*8 :: cb_tip, cfc_tip
 
             if (pf%ParallelHingeLine) then
-                cb_root = c_over_b_zb(pf, pf%AileronRoot)
-                cfc_root = pf%FlapFractionRoot
                 cb_tip = c_over_b_zb(pf, pf%AileronTip)
-                cfc_tip = 0.75d0 - cb_root / cb_tip * (0.75d0 - cfc_root)
-                pf%FlapFractionTip = cfc_tip
+                cfc_tip = pf%FlapFractionTip
+                cb_root = c_over_b_zb(pf, pf%AileronRoot)
+                cfc_root = 0.75d0 - cb_tip / cb_root * (0.75d0 - cfc_tip)
+                pf%FlapFractionRoot = cfc_root
             end if
-        end subroutine ComputeAileronTipFlapFraction
+        end subroutine ComputeAileronRootFlapFraction
 
         subroutine DeallocateArrays(pf)
             type(Planform), intent(inout) :: pf

@@ -11,7 +11,7 @@ contains
 
         call AllocateArrays(pf)
 
-        call ComputeAileronTipFlapFraction(pf)
+        call ComputeAileronRootFlapFraction(pf)
 
         call ComputeC(pf, pf%BigC)
         call ComputeCInverse(pf, pf%BigC_Inv)

@@ -67,7 +67,7 @@ contains
             & pf%FlapFractionRoot, " )"
         write(6, '(4x, a, f7.4, a)') "FT - Edit the flap fraction at the aileron tip (cf/c = ", &
             & pf%FlapFractionTip, " )"
-        write(6, '(4x, a)') "P  - Toggle calculation of flap fraction at aileron tip to make"
+        write(6, '(4x, a)') "P  - Toggle calculation of flap fraction at aileron root to make"
         write(6, '(4x, 4x, a, l1, a)') "hinge line parallel with quarter-chord line ( ", &
             & pf%ParallelHingeLine, " )"
         write(6, '(4x, a, f7.4, a)') "H  - Edit aileron hinge efficiency ( ", &
@@ -280,6 +280,10 @@ contains
         type(Planform), intent(inout) :: pf
 
         write(6, *)
+        if (pf%ParallelHingeLine) then
+            pf%ParallelHingeLine = .false.
+            write(6, '(a)') "NOTE: Calculation of flap fraction at aileron root has been turned off."
+        end if
         write(6, '(a)') "Enter cf/c at aileron root:"
 
         pf%FlapFractionRoot = GetRealInput()
@@ -289,10 +293,6 @@ contains
         type(Planform), intent(inout) :: pf
 
         write(6, *)
-        if (pf%ParallelHingeLine) then
-            pf%ParallelHingeLine = .false.
-            write(6, '(a)') "NOTE: Calculation of flap fraction at aileron tip has been turned off."
-        end if
         write(6, '(a)') "Enter cf/c at aileron tip:"
 
         pf%FlapFractionTip = GetRealInput()
