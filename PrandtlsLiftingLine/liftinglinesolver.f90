@@ -254,6 +254,19 @@ contains
         kdw = kdw * (b(1) / a(1))**2
     end function Kappa_DOmega
 
+    real*8 function C_Di(cl, kd, kdl, cla, omega, kdw, ra) result (cdi)
+        real*8, intent(in) :: cl
+        real*8, intent(in) :: kd
+        real*8, intent(in) :: kdl
+        real*8, intent(in) :: cla
+        real*8, intent(in) :: omega
+        real*8, intent(in) :: kdw
+        real*8, intent(in) :: ra
+
+        cdi = (cl * cl * (1.0d0 + kd) - kdl * cl * cla * omega + &
+            & kdw * (cla * omega)**2) / (pi * ra)
+    end function C_Di
+
     real*8 function CRM_dAlpha(ra, c2) result(crmda)
         real*8, intent(in) :: ra
         real*8, intent(in) :: c2
@@ -294,19 +307,6 @@ contains
                 & 1.0d0) * bigA(i-1) * bigA(i)
         end do
     end function CYaw
-
-    real*8 function C_Di(cl, kd, kdl, cla, omega, kdw, ra) result (cdi)
-        real*8, intent(in) :: cl
-        real*8, intent(in) :: kd
-        real*8, intent(in) :: kdl
-        real*8, intent(in) :: cla
-        real*8, intent(in) :: omega
-        real*8, intent(in) :: kdw
-        real*8, intent(in) :: ra
-
-        cdi = (cl * cl * (1.0d0 + kd) - kdl * cl * cla * omega + &
-            & kdw * (cla * omega)**2) / (pi * ra)
-    end function C_Di
 
     subroutine ComputeC(pf, c)
         type(Planform), intent(in) :: pf
@@ -413,7 +413,9 @@ contains
     !    1 = a > (b + tol)
         real*8, intent(in) :: a, b, tol
 
-        if (abs(a - b) < tol) then
+        if (abs(a) < tol .and. abs(b) < tol) then
+            eq = 0
+        else if (abs(a - b) / max(abs(a), abs(b)) < tol) then
             eq = 0
         else if (a < b) then
             eq = -1

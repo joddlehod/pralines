@@ -4,6 +4,6 @@ program PrandtlsLiftingLine
     implicit none
 
     !Begin execution
-    call InitApp()
+    call BeginLiftingLineInterface()
 
 end program
