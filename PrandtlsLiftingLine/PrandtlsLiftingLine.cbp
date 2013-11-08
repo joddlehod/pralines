@@ -32,7 +32,7 @@
 			<Option weight="0" />
 		</Unit>
 		<Unit filename="liftinglineinterface.f90">
-			<Option weight="2" />
+			<Option weight="3" />
 		</Unit>
 		<Unit filename="liftinglineoutput.f90">
 			<Option weight="1" />
@@ -40,8 +40,11 @@
 		<Unit filename="liftinglinesolver.f90">
 			<Option weight="1" />
 		</Unit>
+		<Unit filename="liftinglinesolver_test.f90">
+			<Option weight="2" />
+		</Unit>
 		<Unit filename="main.f90">
-			<Option weight="3" />
+			<Option weight="4" />
 		</Unit>
 		<Unit filename="matrix.f90">
 			<Option weight="0" />
