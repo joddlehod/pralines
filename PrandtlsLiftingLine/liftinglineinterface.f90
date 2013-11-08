@@ -2,6 +2,8 @@ module LiftingLineInterface
     use class_Planform
     use LiftingLineSolver
     use LiftingLineOutput
+    use LiftingLineSolver_Test
+
     implicit none
 
 contains
@@ -193,6 +195,8 @@ contains
             pf%OutputMatrices = .not. pf%OutputMatrices
         else if (input == 'F') then
             call EditFileName(pf)
+        else if (input == 'X') then
+            call TestLiftingLineSolver()
         end if
 
         call ComputeCMatrixAndCoefficients(pf)
