@@ -133,10 +133,10 @@ contains
         msg = "L - Edit lift coefficient"
         call DisplayMessageWithRealDefault(msg, pf%LiftCoefficient, 4)
 
-        msg = "W - Edit amount of linear washout"
+        msg = "W - Edit linear washout"
         call DisplayMessageWithAngleDefault(msg, pf%Omega, 4)
 
-        msg = "D - Edit the aileron deflection"
+        msg = "D - Edit aileron deflection"
         call DisplayMessageWithAngleDefault(msg, pf%AileronDeflection, 4)
 
         msg = "R - Edit dimensionless rolling rate"
@@ -348,7 +348,7 @@ contains
         character*80 :: msg
 
         write(6, *)
-        msg = "Enter new aileron deflection efficiency or press <ENTER> to accept default"
+        msg = "Enter deflection efficiency or press <ENTER> to accept default"
         call DisplayMessageWithRealDefault(msg, pf%DeflectionEfficiency, 0)
         pf%DeflectionEfficiency = GetRealInput(0.0d0, 1.0d0, pf%DeflectionEfficiency)
     end subroutine EditDeflectionEfficiency
@@ -356,10 +356,16 @@ contains
     subroutine EditFileName(pf)
         type(Planform), intent(inout) :: pf
 
-        write(6, *)
-        write(6, '(a)') "Enter name of output file:"
+        character*80 :: temp_filename
 
-        read(5, '(a)') pf%FileName
+        write(6, *)
+        write(6, '(a, a, a, a)') "Enter output file name or press ", &
+            & "<ENTER> to accept default ( ", trim(pf%FileName), " )"
+
+        read(5, '(a)') temp_filename
+        if (len(trim(temp_filename)) /= 0) then
+            pf%FileName = trim(temp_filename)
+        end if
     end subroutine EditFileName
 
     subroutine EditAngleOfAttack(pf)
@@ -370,8 +376,8 @@ contains
         write(6, *)
         write(6, '(a)') "NOTE: This operation will calculate a new lift coefficient."
 
-        msg = "Enter new angle of attack or press <ENTER> to accept default"
-        call DisplayMessageWithAngleDefault(msg, pf%AngleOfAttack, 0)
+        msg = "Enter angle of attack or press <ENTER> to accept default"
+        call DisplayMessageWithAngleDefault(msg, pf%DesiredAngleOfAttack, 0)
         pf%DesiredAngleOfAttack = GetRealInput(-12.0d0, 12.0d0, &
             & pf%DesiredAngleOfAttack * 180.0d0 / pi) * pi / 180.0d0
         pf%AngleOfAttack = pf%DesiredAngleOfAttack
@@ -385,7 +391,7 @@ contains
 
         write(6, *)
         write(6, '(a)') "NOTE: This operation will calculate a new root aerodynamic angle of attack."
-        msg = "Enter a new lift coefficient or press <ENTER> to accept default"
+        msg = "Enter lift coefficient or press <ENTER> to accept default"
         call DisplayMessageWithRealDefault(msg, pf%DesiredLiftCoefficient, 0)
         pf%DesiredLiftCoefficient = GetRealInput(-100.0d0, 100.0d0, &
             & pf%DesiredLiftCoefficient)
@@ -399,7 +405,7 @@ contains
         character*80 :: msg
 
         write(6, *)
-        msg = "Enter amount of linear washout or press <ENTER> to accept default"
+        msg = "Enter linear washout or press <ENTER> to accept default"
         call DisplayMessageWithAngleDefault(msg, pf%Omega, 0)
         pf%Omega = GetRealInput(-100.0d0, 100.0d0, pf%Omega * 180.0d0 / pi) * &
             & pi / 180.0d0
@@ -411,7 +417,7 @@ contains
         character*80 :: msg
 
         write(6, *)
-        msg = "Enter the aileron deflection or press <ENTER> to accept default"
+        msg = "Enter aileron deflection or press <ENTER> to accept default"
         call DisplayMessageWithAngleDefault(msg, pf%AileronDeflection, 0)
         pf%AileronDeflection = GetRealInput(-12.0d0, 12.0d0, &
             & pf%AileronDeflection * 180.0d0 / pi) * pi / 180.0d0
@@ -423,7 +429,7 @@ contains
         character*80 :: msg
 
         write(6, *)
-        msg = "Enter the dimensionless rolling rate or press <ENTER> to accept default"
+        msg = "Enter dimensionless rolling rate or press <ENTER> to accept default"
         call DisplayMessageWithRealDefault(msg, pf%RollingRate, 0)
         pf%RollingRate = GetRealInput(-100.0d0, 100.0d0, pf%RollingRate)
     end subroutine EditRollingRate
@@ -561,7 +567,7 @@ contains
         do while (cont)
             read(5, '(a)', iostat=ios) inp_str
             if (ios == 0 .and. trim(inp_str) /= "") then
-                read(inp_str, *, iostat=ios) inp
+                ios = ParseFormula(trim(inp_str), inp)
                 if (ios /= 0 .or. inp < mn .or. inp > mx) then
                     write(6, *)
                     write(6, '(a, a, a, a, a, a)') "Invalid input. Please ", &
@@ -577,6 +583,61 @@ contains
             end if
         end do
     end function GetRealInput
+
+    integer function ParseFormula(inp_str, num) result(estat)
+        character*80, intent(in) :: inp_str
+        real*8, intent(out) :: num
+
+        integer :: i, j, n_oper, last_ind, strlen, ios
+        character*40 :: operators, temp_num
+        real*8, Dimension(41) :: numbers
+
+        estat = 0
+        strlen = len(trim(inp_str))
+        n_oper = 0
+        last_ind = 0
+        do i = 2, strlen
+            if (inp_str(i:i) == '*' .or. inp_str(i:i) == '/') then
+                n_oper = n_oper + 1
+                operators(n_oper:n_oper) = inp_str(i:i)
+                temp_num = "                                        "
+                temp_num(1:i-last_ind-1) = inp_str(last_ind+1:i-1)
+                if ((temp_num(1:1) == 'P' .or. temp_num(1:1) == 'p') .and. &
+                    & (temp_num(2:2) == 'I' .or. temp_num(2:2) == 'i')) then
+                    numbers(n_oper) = pi
+                else
+                    read(temp_num, *, iostat=ios) numbers(n_oper)
+                    if (ios /= 0) then
+                        estat = 1
+                    end if
+                end if
+                last_ind = i
+            end if
+        end do
+
+        temp_num = "                                        "
+        temp_num(1:strlen-last_ind) = inp_str(last_ind+1:strlen)
+        if ((temp_num(1:1) == 'P' .or. temp_num(1:1) == 'p') .and. &
+            & (temp_num(2:2) == 'I' .or. temp_num(2:2) == 'i')) then
+            numbers(n_oper + 1) = pi
+        else
+            read(temp_num, *, iostat = ios) numbers(n_oper + 1)
+            if (ios /= 0) then
+                estat = 1
+            end if
+        end if
+
+        num = numbers(1)
+        do i = 1, n_oper
+            if (operators(i:i) == '*') then
+                num = num * numbers(i + 1)
+            else if (operators(i:i) == '/') then
+                num = num / numbers(i + 1)
+            else
+                estat = 2
+            end if
+        end do
+    end function ParseFormula
 
     character*80 function FormatReal(r, ndigits) result(real_str)
         real*8, intent(in) :: r
