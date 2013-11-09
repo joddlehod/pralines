@@ -1,13 +1,12 @@
 module class_Planform
+    use Utilities
     implicit none
 
     public :: Planform
 
-    real*8, parameter :: pi = acos(-1.0d0)
-
     ! Supported wing types
     enum, bind(C)
-        enumerator :: Tapered = 1, Elliptic = 2
+        enumerator :: Tapered = 1, Elliptic = 2, TaperedElliptic = 3
     end enum
 
     type Planform
@@ -16,14 +15,14 @@ module class_Planform
         integer :: NNodes = 7 ! Total number of nodes
         real*8 :: AspectRatio = 5.56d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
-        real*8 :: LiftSlope = 2.0d0 * pi ! Section lift slope
+        real*8 :: SectionLiftSlope = 2.0d0 * pi ! Section lift slope
         real*8 :: AileronRoot = 0.253d0 ! Location of aileron root (z/b)
         real*8 :: AileronTip = 0.438d0 ! Location of aileron tip (z/b)
-        real*8 :: FlapFractionRoot = 0.28d0 ! Flap fraction at aileron root (cf/c)
-        real*8 :: FlapFractionTip = 0.25d0 ! Flap fraction at aileron tip (cf/c)
         logical :: ParallelHingeLine = .true. ! Is the hinge line parallel to the
                                               ! quarter-chord line? When true,
                                               ! FlapFractionTip will be calculated
+        real*8 :: FlapFractionRoot = 0.28d0 ! Flap fraction at aileron root (cf/c)
+        real*8 :: FlapFractionTip = 0.25d0 ! Flap fraction at aileron tip (cf/c)
         real*8 :: HingeEfficiency = 0.85d0 ! Aileron hinge efficiency
         real*8 :: DeflectionEfficiency = 1.0d0 ! Aileron deflection efficiency
 
@@ -42,10 +41,12 @@ module class_Planform
         real*8 :: LiftCoefficient = 0.4d0 ! Lift coefficient
         real*8 :: Omega = 0.0d0 ! Amount of linear twist, in radians
         real*8 :: AileronDeflection = 0.0d0 ! Aileron deflection, in radians
+        real*8 :: DesiredRollingRate = 0.0d0 ! Desired dimensionless rolling rate (constant over wingspan)
         real*8 :: RollingRate = 0.0d0 ! Dimensionless rolling rate (constant over wingspan)
         logical :: SpecifyAlpha = .true. ! Was alpha specified?
                                          ! .true.  = Use desired alpha to calculate CL
                                          ! .false. = Use desired CL to calculate alpha
+        logical :: UseSteadyRollingRate = .true. ! Use the steady dimensionless rolling rate?
 
         ! Planform Calculations
         real*8, allocatable, dimension(:,:) :: BigC, BigC_Inv
@@ -74,9 +75,8 @@ module class_Planform
     end type Planform
 
     contains
-        function GetWingType(pf) result(name)
+        character*80 function GetWingType(pf) result(name)
             type(Planform), intent(in) :: pf
-            character*8 :: name
 
             if (pf%WingType .eq. Tapered) then
                 name = "Tapered"
@@ -215,21 +215,6 @@ module class_Planform
             eps_f = eps_fi * pf%HingeEfficiency * pf%DeflectionEfficiency
         end function FlapEffectiveness
 
-        subroutine ComputeAileronRootFlapFraction(pf)
-            type(Planform), intent(inout) :: pf
-
-            real*8 :: cb_root, cfc_root
-            real*8 :: cb_tip, cfc_tip
-
-            if (pf%ParallelHingeLine) then
-                cb_tip = c_over_b_zb(pf, pf%AileronTip)
-                cfc_tip = pf%FlapFractionTip
-                cb_root = c_over_b_zb(pf, pf%AileronRoot)
-                cfc_root = 0.75d0 - cb_tip / cb_root * (0.75d0 - cfc_tip)
-                pf%FlapFractionRoot = cfc_root
-            end if
-        end subroutine ComputeAileronRootFlapFraction
-
         subroutine DeallocateArrays(pf)
             type(Planform), intent(inout) :: pf
 
@@ -241,6 +226,7 @@ module class_Planform
                 deallocate(pf%BigA)
                 deallocate(pf%BigC)
                 deallocate(pf%BigC_Inv)
+                pf%IsAllocated = .false.
             end if
         end subroutine DeallocateArrays
 

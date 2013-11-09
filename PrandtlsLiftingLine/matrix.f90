@@ -48,9 +48,9 @@ contains
         character*80 :: format_string
 
         if (u == 6) then
-            write(format_string, '(a, i3, a)') "(", n, "(F9.5, 2x))"
+            write(format_string, '(a, i10, a)') "(", n, "(F9.5, 2x))"
         else
-            write(format_string, '(a, i3, a)') "(", n, "(ES22.15, 2x))"
+            write(format_string, '(a, i10, a)') "(", n, "(ES22.15, 2x))"
         end if
 
         do i = 1, m

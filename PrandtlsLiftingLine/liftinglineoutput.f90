@@ -1,4 +1,5 @@
 module LiftingLineOutput
+    use Utilities
     use class_Planform
     use matrix
     implicit none
@@ -129,7 +130,7 @@ contains
         write(u, fmt_str) "Number of nodes", "=", pf%NNodes, " (", &
             & (pf%NNodes + 1) / 2, " nodes per semispan)"
         write(u, '(2x, a26, 1x, a1, f20.15)') &
-            & "Airfoil section lift slope", "=", pf%LiftSlope
+            & "Airfoil section lift slope", "=", pf%SectionLiftSlope
         write(u, '(2x, a12, 14x, 1x, a1, f20.15)') &
             & "Aspect Ratio", "=", pf%AspectRatio
         if (pf%WingType == Tapered) then

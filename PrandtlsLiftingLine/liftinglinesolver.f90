@@ -1,31 +1,10 @@
 module LiftingLineSolver
     use class_Planform
+    use LiftingLineOutput
     use matrix
     implicit none
 
-    real*8 :: zero = 1.0d-10
-
 contains
-    subroutine ComputeCMatrixAndCoefficients(pf)
-        type(Planform), intent(inout) :: pf
-
-        call AllocateArrays(pf)
-
-        call ComputeAileronRootFlapFraction(pf)
-
-        call ComputeC(pf, pf%BigC)
-        call ComputeCInverse(pf, pf%BigC_Inv)
-        call ComputeFourierCoefficients_a(pf, pf%a)
-        call ComputeFourierCoefficients_b(pf, pf%b)
-        call ComputeFourierCoefficients_c(pf, pf%c)
-        call ComputeFourierCoefficients_d(pf, pf%d)
-
-        call ComputeLiftCoefficientParameters(pf)
-        call ComputeDragCoefficientParameters(pf)
-        call ComputeRollCoefficientParameters(pf)
-        call ComputeFlightConditions(pf)
-    end subroutine ComputeCMatrixAndCoefficients
-
     subroutine ComputeFourierCoefficients_a(pf, a)
         type(Planform), intent(in) :: pf
         real*8, intent(out) :: a(pf%NNodes)
@@ -120,34 +99,10 @@ contains
         end do
     end subroutine ComputeBigACoefficients
 
-    subroutine ComputeFlightConditions(pf)
-        type(Planform), intent(inout) :: pf
-
-        ! Compute lift coefficient / root aerodynamic angle of attack
-        if (pf%SpecifyAlpha) then
-            pf%LiftCoefficient = C_L(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Omega)
-        else
-            pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Omega)
-        end if
-
-        ! Compute drag coefficient
-        pf%CDi = C_Di(pf%LiftCoefficient, pf%KD, pf%KDL, pf%CLa, pf%Omega, &
-            & pf%KDW, pf%AspectRatio)
-
-        ! Compute roll coefficient
-        pf%CRM = CRoll(pf%CRM_da, pf%CRM_pbar, pf%AileronDeflection, pf%RollingRate)
-
-        ! Compute BigA Fourier Coefficients
-        call ComputeBigACoefficients(pf, pf%BigA)
-
-        ! Compute yaw coefficient
-        pf%CYM = CYaw(pf, pf%LiftCoefficient, pf%BigA)
-    end subroutine ComputeFlightConditions
-
     subroutine ComputeLiftCoefficientParameters(pf)
         type(Planform), intent(inout) :: pf
 
-        pf%KL = Kappa_L(pf%AspectRatio, pf%LiftSlope, pf%a(1))
+        pf%KL = Kappa_L(pf%AspectRatio, pf%SectionLiftSlope, pf%a(1))
         pf%EW = Epsilon_Omega(pf%a(1), pf%b(1))
         pf%CLa = C_L_alpha(pf%AspectRatio, pf%a(1))
     end subroutine ComputeLiftCoefficientParameters
@@ -373,7 +328,7 @@ contains
         sin_theta = sin(theta)
 
         do j = 1, nnode
-            c(i, j) = (4.0d0 / (pf%LiftSlope * cb) + &
+            c(i, j) = (4.0d0 / (pf%SectionLiftSlope * cb) + &
                 & real(j, 8) / sin_theta) * sin(real(j, 8) * theta)
         end do
     end subroutine Cij
@@ -391,37 +346,14 @@ contains
         else if (pf%WingType == Elliptic) then
             do j = 1, pf%NNodes
                 c(1, j) = c(1, j) + real(j, 8) * pi * &
-                    & pf%AspectRatio / pf%LiftSlope
+                    & pf%AspectRatio / pf%SectionLiftSlope
                 c(n, j) = c(n, j) + real((-1)**(j + 1) * j, 8) * pi * &
-                    & pf%AspectRatio / pf%LiftSlope
+                    & pf%AspectRatio / pf%SectionLiftSlope
             end do
         else
             stop "*** Unknown Wing Type ***"
         end if
 
     end subroutine C1j_Nj_zero_chord
-
-    integer function Compare(a, b, tol) result(eq)
-    ! Comparison function
-    ! Inputs:
-    !   a = First argument to compare
-    !   b = Second argument to compare
-    !   tol = Relative tolerance for comparison
-    ! Return Value (eq):
-    !   -1 = a < (b - tol)
-    !    0 = a == b (within tolerance)
-    !    1 = a > (b + tol)
-        real*8, intent(in) :: a, b, tol
-
-        if (abs(a) < tol .and. abs(b) < tol) then
-            eq = 0
-        else if (abs(a - b) / max(abs(a), abs(b)) < tol) then
-            eq = 0
-        else if (a < b) then
-            eq = -1
-        else
-            eq = 1
-        end if
-    end function Compare
 
 end module LiftingLineSolver
