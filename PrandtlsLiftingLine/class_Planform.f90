@@ -38,7 +38,7 @@ module class_Planform
                                               ! (alpha - alpha_L0), in radians
         real*8 :: DesiredLiftCoefficient = 0.4d0 ! Desired lift coefficient
                                                  ! When specified, a new AngleOfAttack is calculated
-        real*8 :: LiftCoefficient = 0.4d0 ! Lift coefficient
+        real*8 :: LiftCoefficient = 0.4d0 ! Lift coefficient (user input, ignored if SpecifyAlpha == .true.)
         real*8 :: Omega = 0.0d0 ! Amount of linear twist, in radians
         real*8 :: AileronDeflection = 0.0d0 ! Aileron deflection, in radians
         real*8 :: DesiredRollingRate = 0.0d0 ! Desired dimensionless rolling rate (constant over wingspan)
@@ -57,13 +57,17 @@ module class_Planform
         real*8 :: KL  ! Lift slope factor
         real*8 :: EW  ! Washout effectiveness (epsilon omega)
         real*8 :: CLa ! Wing lift slope (derivative of CL with respect to alpha)
+        real*8 :: CL1 ! Lift Coefficient (Eq. 1.8.24)
+        real*8 :: CL2 ! Lift Coefficient (Eq. 1.8.5)
 
         ! Drag Coefficient Calculations
-        real*8 :: KD  ! Induced drag factor
-        real*8 :: KDL ! Lift-washout contribution to induced drag
-        real*8 :: KDW ! Washout contribution to induced drag
-        real*8 :: ES  ! Span efficiency factor
-        real*8 :: CDi ! Induced drag coefficient
+        real*8 :: KD   ! Induced drag factor
+        real*8 :: KDL  ! Lift-washout contribution to induced drag
+        real*8 :: KDW  ! Washout contribution to induced drag
+        real*8 :: ES   ! Span efficiency factor
+        real*8 :: CDi1 ! Induced drag coefficient (Eq. 1.8.25)
+        real*8 :: CDi2 ! Induced drag coefficient (Eq. 1.8.6)
+        real*8 :: CDi3 ! Induced drag coefficient (Eq. 32, Wing Flapping paper)
 
         ! Roll/yaw calculations
         real*8 :: CRM_da   ! Change in rolling moment coefficient with respect to alpha

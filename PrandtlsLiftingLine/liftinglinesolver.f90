@@ -1,10 +1,36 @@
 module LiftingLineSolver
     use class_Planform
+    use LiftingLineSetters
     use LiftingLineOutput
     use matrix
     implicit none
 
 contains
+    subroutine ComputeCMatrixAndCoefficients(pf)
+        type(Planform), intent(inout) :: pf
+
+        write(6, *)
+        write(6, '(a)') "Calculating C matrix and Fourier coefficients, please wait..."
+        write(6, '(a, a, a)') "Estimated calculation time: ", &
+            & trim(FormatReal(pf%NNodes**2 * 1.0d-5, 3)), " seconds"
+
+        if (.not. pf%IsAllocated) then
+            call AllocateArrays(pf)
+
+            call ComputeC(pf, pf%BigC)
+            call ComputeCInverse(pf, pf%BigC_Inv)
+            call ComputeFourierCoefficients_a(pf, pf%a)
+            call ComputeFourierCoefficients_b(pf, pf%b)
+            call ComputeFourierCoefficients_c(pf, pf%c)
+            call ComputeFourierCoefficients_d(pf, pf%d)
+
+            call ComputeLiftCoefficientParameters(pf)
+            call ComputeDragCoefficientParameters(pf)
+            call ComputeRollCoefficientParameters(pf)
+            call ComputeFlightConditions(pf)
+        end if
+    end subroutine ComputeCMatrixAndCoefficients
+
     subroutine ComputeFourierCoefficients_a(pf, a)
         type(Planform), intent(in) :: pf
         real*8, intent(out) :: a(pf%NNodes)
@@ -145,24 +171,6 @@ contains
         cla = pi * ra * a1
     end function C_L_alpha
 
-    real*8 function C_L(cla, alpha, ew, omega) result(cl)
-        real*8, intent(in) :: cla
-        real*8, intent(in) :: alpha
-        real*8, intent(in) :: ew
-        real*8, intent(in) :: omega
-
-        cl = cla * (alpha - ew * omega)
-    end function C_L
-
-    real*8 function RootAlpha(cla, cl, ew, omega) result(alpha)
-        real*8, intent(in) :: cla
-        real*8, intent(in) :: cl
-        real*8, intent(in) :: ew
-        real*8, intent(in) :: omega
-
-        alpha = cl / cla + ew * omega
-    end function RootAlpha
-
     real*8 function Kappa_D(nnodes, a) result(kd)
         integer, intent(in) :: nnodes
         real*8, intent(in) :: a(nnodes)
@@ -209,19 +217,6 @@ contains
         kdw = kdw * (b(1) / a(1))**2
     end function Kappa_DOmega
 
-    real*8 function C_Di(cl, kd, kdl, cla, omega, kdw, ra) result (cdi)
-        real*8, intent(in) :: cl
-        real*8, intent(in) :: kd
-        real*8, intent(in) :: kdl
-        real*8, intent(in) :: cla
-        real*8, intent(in) :: omega
-        real*8, intent(in) :: kdw
-        real*8, intent(in) :: ra
-
-        cdi = (cl * cl * (1.0d0 + kd) - kdl * cl * cla * omega + &
-            & kdw * (cla * omega)**2) / (pi * ra)
-    end function C_Di
-
     real*8 function CRM_dAlpha(ra, c2) result(crmda)
         real*8, intent(in) :: ra
         real*8, intent(in) :: c2
@@ -235,6 +230,56 @@ contains
 
         crmpbar = -pi * ra / 4.0d0 * d2
     end function CRM_PBar
+
+    subroutine ComputeFlightConditions(pf)
+        type(Planform), intent(inout) :: pf
+
+        ! Make sure planform characteristics have been computed
+        if (.not. pf%IsAllocated) then
+            call ComputeCMatrixAndCoefficients(pf)
+        end if
+
+        ! Compute root aerodynamic angle of attack, if necessary
+        if (.not. pf%SpecifyAlpha) then
+            pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Omega)
+        else
+            pf%LiftCoefficient = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Omega)
+        end if
+
+        ! Compute steady rolling rate, if necessary
+        if (pf%UseSteadyRollingRate) then
+            call SetSteadyRollingRate(pf)
+        end if
+
+        ! Compute BigA Fourier Coefficients
+        call ComputeBigACoefficients(pf, pf%BigA)
+
+        ! Compute lift coefficients
+        call ComputeLiftCoefficients(pf)
+
+        ! Compute drag coefficient
+        call ComputeDragCoefficients(pf)
+
+        ! Compute roll coefficient
+        pf%CRM = CRoll(pf%CRM_da, pf%CRM_pbar, pf%AileronDeflection, pf%RollingRate)
+
+        ! Compute yaw coefficient
+        pf%CYM = CYaw(pf, pf%CL1, pf%BigA)
+    end subroutine ComputeFlightConditions
+
+    subroutine ComputeLiftCoefficients(pf)
+        type(Planform), intent(inout) :: pf
+
+        pf%CL1 = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Omega)
+        pf%CL2 = CL2(pf%AspectRatio, pf%BigA(1))
+    end subroutine ComputeLiftCoefficients
+
+    subroutine ComputeDragCoefficients(pf)
+        type(Planform), intent(inout) :: pf
+
+        pf%CDi1 = CDi1(pf)
+        pf%CDi2 = CDi2(pf)
+    end subroutine ComputeDragCoefficients
 
     real*8 function CRoll(crmda, crmpbar, da, pbar) result(crm)
         real*8, intent(in) :: crmda

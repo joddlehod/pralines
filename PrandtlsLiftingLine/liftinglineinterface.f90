@@ -410,8 +410,8 @@ contains
         character*80 :: msg
         real*8 :: mn, mx, dflt
 
-        mn = C_L(pf%CLa, -12.0d0 * pi / 180.0d0, pf%EW, pf%Omega)
-        mx = C_L(pf%CLa,  12.0d0 * pi / 180.0d0, pf%EW, pf%Omega)
+        mn = CL1(pf%CLa, -12.0d0 * pi / 180.0d0, pf%EW, pf%Omega)
+        mx = CL1(pf%CLa,  12.0d0 * pi / 180.0d0, pf%EW, pf%Omega)
         if (pf%DesiredLiftCoefficient < mn) then
             dflt = mn
         else if (pf%DesiredLiftCoefficient > mx) then

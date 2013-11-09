@@ -98,8 +98,11 @@ contains
         type(Planform), intent(in) :: pf
 
         write(u, '(a)') "Flight Coefficients:"
-        write(u, '(2x, a, f20.15)') "CL    = ", pf%LiftCoefficient
-        write(u, '(2x, a, f20.15)') "CDi   = ", pf%CDi
+        write(u, '(2x, a, f20.15, a)') "CL    = ", pf%CL1, " (Eq. 1.8.24)"
+        write(u, '(2x, a, f20.15, a)') "CL    = ", pf%CL2, " (Eq. 1.8.5)"
+        write(u, '(2x, a, f20.15, a)') "CDi   = ", pf%CDi1, " (Eq. 1.8.25)"
+        write(u, '(2x, a, f20.15, a)') "CDi   = ", pf%CDi2, " (Eq. 1.8.6)"
+        write(u, '(2x, a, f20.15, a)') "CDi   = ", pf%CDi3, " (Exact)"
         write(u, '(2x, a, f20.15)') "Croll = ", pf%CRM
         write(u, '(2x, a, f20.15)') "Cyaw  = ", pf%CYM
         write(u, *)
