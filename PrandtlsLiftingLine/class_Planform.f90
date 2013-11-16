@@ -96,7 +96,7 @@ module class_Planform
             integer, intent(in) :: nnodes
 
             if (i < 1 .or. i > nnodes) then
-                write(6, '(a, f7.4)') "ERROR: Function theta_i called with i = ", i
+                write(6, '(a, i3)') "ERROR: Function theta_i called with i = ", i
                 if (i < 1) then
                     theta = 0.0d0
                 else

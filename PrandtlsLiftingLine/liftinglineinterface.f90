@@ -3,6 +3,7 @@ module LiftingLineInterface
     use LiftingLineSetters
     use LiftingLineSolver
     use LiftingLineOutput
+    use LiftingLinePlotting
     use LiftingLineSolver_Test
 
     implicit none
@@ -17,6 +18,7 @@ contains
             if (inp == 'A') then
                 call ComputeCMatrixAndCoefficients(pf)
                 call OutputPlanform(pf)
+                call PlotPlanform(pf)
                 do while(inp /= 'Q' .and. inp /= 'B')
                     inp = OperatingConditions(pf)
                     if (inp == 'E') then
