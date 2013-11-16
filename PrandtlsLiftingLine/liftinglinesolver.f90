@@ -279,6 +279,7 @@ contains
 
         pf%CDi1 = CDi1(pf)
         pf%CDi2 = CDi2(pf)
+        pf%CDi3 = CDi3(pf)
     end subroutine ComputeDragCoefficients
 
     real*8 function CRoll(crmda, crmpbar, da, pbar) result(crm)

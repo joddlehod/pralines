@@ -279,7 +279,15 @@ contains
     real*8 function CDi3(pf) result(cdi)
         type(Planform), intent(in) :: pf
 
+        integer :: i
+        real*8 :: ri
+
         cdi = 0.0d0
+        do i = 1, pf%NNodes
+            ri = real(i, 8)
+            cdi = cdi + ri * pf%BigA(i)**2
+        end do
+        cdi = (cdi - 0.5d0 * pf%RollingRate * pf%BigA(2)) * pi * pf%AspectRatio
     end function CDi3
 
 end module LiftingLineSetters
