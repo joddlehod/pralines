@@ -9,10 +9,10 @@ contains
     subroutine ComputeCMatrixAndCoefficients(pf)
         type(Planform), intent(inout) :: pf
 
-        write(6, *)
         write(6, '(a)') "Calculating C matrix and Fourier coefficients, please wait..."
         write(6, '(a, a, a)') "Estimated calculation time: ", &
             & trim(FormatReal(pf%NNodes**2 * 1.0d-5, 3)), " seconds"
+        write(6, *)
 
         if (.not. pf%IsAllocated) then
             call AllocateArrays(pf)
@@ -57,14 +57,26 @@ contains
         real*8, intent(out) :: b(pf%NNodes)
 
         real*8 :: omega(pf%NNodes)
+        real*8 :: croot_over_b, theta
         integer :: i
         integer :: nnodes
 
         nnodes = pf%NNodes
-        omega = (/ (dabs(cos(theta_i(i, nnodes))), i=1, nnodes) /)
-        if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
-            omega(1) = 0.0d0
-            omega(nnodes) = 0.0d0
+        if (pf%WashoutDistribution == Linear) then
+            omega = (/ (dabs(cos(theta_i(i, nnodes))), i=1, nnodes) /)
+            if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+                omega(1) = 0.0d0
+                omega(nnodes) = 0.0d0
+            end if
+        else if (pf%WashoutDistribution == Optimum) then
+            croot_over_b = c_over_b(pf, pi / 2.0d0)
+            do i = 1, nnodes
+                theta = theta_i(i, nnodes)
+                omega(i) = 1.0d0 - sin(theta) / (c_over_b(pf, theta) / croot_over_b)
+            end do
+        else
+            write(6, '(a)') "Unknown washout distribution type!"
+            stop
         end if
 
         b = matmul(pf%BigC_Inv, omega)
@@ -123,7 +135,7 @@ contains
         integer :: i
 
         do i = 1, pf%NNodes
-            bigA(i) = pf%a(i) * pf%AngleOfAttack - pf%b(i) * pf%Omega + &
+            bigA(i) = pf%a(i) * pf%AngleOfAttack - pf%b(i) * pf%Washout + &
                 & pf%c(i) * pf%AileronDeflection + pf%d(i) * pf%RollingRate
         end do
     end subroutine ComputeBigACoefficients
@@ -244,9 +256,16 @@ contains
 
         ! Compute root aerodynamic angle of attack, if necessary
         if (.not. pf%SpecifyAlpha) then
-            pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Omega)
+            pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Washout)
         else
-            pf%LiftCoefficient = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Omega)
+            pf%LiftCoefficient = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Washout)
+        end if
+
+        ! Compute optimum total washout, if necessary
+        if (pf%UseOptimumWashout) then
+            call SetOptimumWashout(pf)
+        else
+            call SetWashout(pf, pf%DesiredWashout * 180.0d0 / pi)
         end if
 
         ! Compute steady rolling rate, if necessary
@@ -273,7 +292,7 @@ contains
     subroutine ComputeLiftCoefficients(pf)
         type(Planform), intent(inout) :: pf
 
-        pf%CL1 = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Omega)
+        pf%CL1 = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Washout)
         pf%CL2 = CL2(pf%AspectRatio, pf%BigA(1))
     end subroutine ComputeLiftCoefficients
 

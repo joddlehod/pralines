@@ -9,9 +9,15 @@ module class_Planform
         enumerator :: Tapered = 1, Elliptic = 2, Combination = 3
     end enum
 
+    ! Supported washout distribution types
+    enum, bind(C)
+        enumerator :: Linear = 1, Optimum = 2
+    end enum
+
     type Planform
         ! Wing Parameters
         integer :: WingType = Tapered ! Wing type
+        integer :: WashoutDistribution = Linear ! Washout distribution type
         integer :: NNodes = 7 ! Total number of nodes
         real*8 :: AspectRatio = 5.56d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
@@ -23,6 +29,7 @@ module class_Planform
         logical :: ParallelHingeLine = .true. ! Is the hinge line parallel to the
                                               ! quarter-chord line? When true,
                                               ! FlapFractionTip will be calculated
+        real*8 :: DesiredFlapFractionRoot = 0.28d0 ! Desired flap fraction at aileron root (cf/c)
         real*8 :: FlapFractionRoot = 0.28d0 ! Flap fraction at aileron root (cf/c)
         real*8 :: FlapFractionTip = 0.25d0 ! Flap fraction at aileron tip (cf/c)
         real*8 :: HingeEfficiency = 0.85d0 ! Aileron hinge efficiency
@@ -48,7 +55,11 @@ module class_Planform
         real*8 :: DesiredLiftCoefficient = 0.4d0 ! Desired lift coefficient
                                                  ! When specified, a new AngleOfAttack is calculated
         real*8 :: LiftCoefficient = 0.4d0 ! Lift coefficient (user input, ignored if SpecifyAlpha == .true.)
-        real*8 :: Omega = 0.0d0 ! Amount of linear twist, in radians
+        real*8 :: DesiredWashout = 0.0d0 ! Desired total washout, in radians
+        real*8 :: OptimumWashout1 = 0.0d0 ! Optimum total washout, in radians (Eq. 1.8.37)
+        real*8 :: OptimumWashout2 = 0.0d0 ! Optimum total washout, in radians (Eq. 1.8.42)
+        real*8 :: Washout = 0.0d0 ! Total washout to use
+        logical :: UseOptimumWashout = .true. ! Use the optimum total washout?
         real*8 :: AileronDeflection = 0.0d0 ! Aileron deflection, in radians
         real*8 :: DesiredRollingRate = 0.0d0 ! Desired dimensionless rolling rate (constant over wingspan)
         real*8 :: RollingRate = 0.0d0 ! Dimensionless rolling rate (constant over wingspan)
@@ -100,6 +111,18 @@ module class_Planform
                 name = "Unknown"
             end if
         end function GetWingType
+
+        character*80 function GetWashoutDistributionType(pf) result(name)
+            type(Planform), intent(in) :: pf
+
+            if (pf%WashoutDistribution .eq. Linear) then
+                name = "Linear"
+            else if (pf%WashoutDistribution .eq. Optimum) then
+                name = "Optimum"
+            else
+                name = "Unknown"
+            end if
+        end function GetWashoutDistributionType
 
         real*8 function theta_i(i, nnodes) result(theta)
             integer, intent(in) :: i

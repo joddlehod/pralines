@@ -80,8 +80,14 @@ contains
         integer, intent(in) :: u  ! Output unit
         type(Planform), intent(in) :: pf
 
-        write(u, '(a15, 17x, 1x, a1, f20.15, 1x, a)') &
-            & "Washout (twist)", "=", pf%Omega * 180.0d0 / pi, "degrees"
+        write(u, '(a15, 17x, 1x, a1, f20.15, 1x, a)') "Washout (twist)", &
+            & "=", pf%Washout * 180.0d0 / pi, "degrees"
+        write(u, '(a15, 17x, 1x, a1, f20.15, 1x, a)') "Optimum washout", &
+            & "=", pf%OptimumWashout1 * 180.0d0 / pi, "degrees (Eq. 1.8.37)"
+        if (pf%WashoutDistribution == Optimum) then
+            write(u, '(a15, 17x, 1x, a1, f20.15, 1x, a)') "Optimum washout", &
+                & "=", pf%OptimumWashout2 * 180.0d0 / pi, "degrees (Eq. 1.8.42)"
+        end if
         write(u, '(a18, 14x, 1x, a1, f20.15, 1x, a)') &
             & "Aileron deflection", "=", &
             & pf%AileronDeflection * 180.0d0 / pi, "degrees"

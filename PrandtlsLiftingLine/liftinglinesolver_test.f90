@@ -32,6 +32,8 @@ contains
         character*80 :: fname_work = "Problem1p34b_work.txt"
         character*80 :: fname_results = "Problem1p34b_results.txt"
 
+		call InitPlanform(pf)
+
         call SetWingType(pf, Elliptic)
         call SetNNodes(pf, 100)
         call SetSectionLiftSlope(pf, 2.0d0 * pi)
@@ -46,7 +48,7 @@ contains
         call ComputeCMatrixAndCoefficients(pf)
         call OutputPlanform(pf)
 
-        call SetOmega(pf, 2.0d0)
+        call SetWashout(pf, 2.0d0)
         call SetAileronDeflection(pf, 5.0d0)
         call SetSteadyRollingRate(pf)
         call SetLiftCoefficient(pf, 0.5d0)
@@ -54,7 +56,7 @@ contains
         call ComputeFlightConditions(pf)
         call OutputFlightConditions(pf)
 
-        call SetOmega(pf, 2.0d0)
+        call SetWashout(pf, 2.0d0)
         call SetAileronDeflection(pf, 5.0d0)
         call SetRollingRate(pf, -0.02d0)
         call SetLiftCoefficient(pf, 0.5d0)
@@ -62,7 +64,7 @@ contains
         call ComputeFlightConditions(pf)
         call OutputFlightConditions(pf)
 
-        call SetOmega(pf, 2.0d0)
+        call SetWashout(pf, 2.0d0)
         call SetAileronDeflection(pf, 5.0d0)
         call SetRollingRate(pf, 0.0d0)
         call SetLiftCoefficient(pf, 0.5d0)

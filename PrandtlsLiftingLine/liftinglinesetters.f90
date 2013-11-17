@@ -3,6 +3,12 @@ module LiftingLineSetters
     implicit none
 
 contains
+    subroutine InitPlanform(pf)
+        type(Planform), intent(inout) :: pf
+
+        call SetParallelHingeLine(pf)
+    end subroutine InitPlanform
+
     ! Planform Parameters
     subroutine SetWingType(pf, wingType)
         type(Planform), intent(inout) :: pf
@@ -15,8 +21,41 @@ contains
             if (pf%ParallelHingeLine) then
                 call SetParallelHingeLine(pf)
             end if
+            if (pf%WingType == Elliptic) then
+                pf%WashoutDistribution = Linear
+            end if
         end if
     end subroutine SetWingType
+
+    subroutine SetWashoutDistribution(pf, washoutDist)
+        type(Planform), intent(inout) :: pf
+        integer, intent(in) :: washoutDist
+
+        if (pf%WingType /= Elliptic .and. pf%WashoutDistribution /= washoutDist) then
+            pf%WashoutDistribution = washoutDist
+            call DeallocateArrays(pf)
+        end if
+    end subroutine SetWashoutDistribution
+
+    subroutine SetTransitionPoint(pf, tp)
+        type(Planform), intent(inout) :: pf
+        real*8, intent(in) :: tp
+
+        if (Compare(pf%TransitionPoint, tp, zero) /= 0) then
+            pf%TransitionPoint = tp
+            call DeallocateArrays(pf)
+        end if
+    end subroutine SetTransitionPoint
+
+    subroutine SetTransitionChord(pf, tc)
+        type(Planform), intent(inout) :: pf
+        real*8, intent(in) :: tc
+
+        if (Compare(pf%TransitionChord, tc, zero) /= 0) then
+            pf%TransitionChord = tc
+            call DeallocateArrays(pf)
+        end if
+    end subroutine SetTransitionChord
 
     subroutine SetNNodes(pf, npss)
         type(Planform), intent(inout) :: pf
@@ -99,6 +138,7 @@ contains
         real*8, intent(in) :: cfc_root
 
         pf%ParallelHingeLine = .false.
+        pf%DesiredFlapFractionRoot = cfc_root
         if (Compare(pf%FlapFractionRoot, cfc_root, zero) /= 0) then
             pf%FlapFractionRoot = cfc_root
             call DeallocateArrays(pf)
@@ -161,7 +201,7 @@ contains
         pf%SpecifyAlpha = .true.
         pf%DesiredAngleOfAttack = alpha * pi / 180.0d0
         pf%AngleOfAttack = pf%DesiredAngleOfAttack
-        pf%LiftCoefficient = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Omega)
+        pf%LiftCoefficient = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Washout)
     end subroutine SetAngleOfAttack
 
     subroutine SetLiftCoefficient(pf, cl)
@@ -171,15 +211,8 @@ contains
         pf%SpecifyAlpha = .false.
         pf%DesiredLiftCoefficient = cl
         pf%LiftCoefficient = pf%DesiredLiftCoefficient
-        pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Omega)
+        pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Washout)
     end subroutine SetLiftCoefficient
-
-    subroutine SetOmega(pf, omega)
-        type(Planform), intent(inout) :: pf
-        real*8, intent(in) :: omega
-
-        pf%Omega = omega * pi / 180.0d0
-    end subroutine SetOmega
 
     subroutine SetAileronDeflection(pf, da)
         type(Planform), intent(inout) :: pf
@@ -188,15 +221,34 @@ contains
         pf%AileronDeflection = da * pi / 180.0d0
     end subroutine SetAileronDeflection
 
+    subroutine SetWashout(pf, washout)
+        type(Planform), intent(inout) :: pf
+        real*8, intent(in) :: washout
+
+        pf%DesiredWashout = washout * pi / 180.0d0
+        pf%Washout = pf%DesiredWashout
+        pf%UseOptimumWashout = .false.
+    end subroutine SetWashout
+
+    subroutine SetOptimumWashout(pf)
+        type(Planform), intent(inout) :: pf
+
+        pf%OptimumWashout1 = (pf%KDL * pf%LiftCoefficient) / &
+            & (2.0d0 * pf%KDW * pf%CLa)
+        if (pf%WashoutDistribution == Optimum) then
+            pf%OptimumWashout2 = (4.0d0 * pf%CL1) / (pi * pf%AspectRatio &
+                & * pf%SectionLiftSlope * c_over_b(pf, pi / 2.0d0))
+        end if
+        pf%Washout = pf%OptimumWashout1
+        pf%UseOptimumWashout = .true.
+    end subroutine SetOptimumWashout
+
     subroutine SetRollingRate(pf, rollingrate)
         type(Planform), intent(inout) :: pf
         real*8, intent(in) :: rollingrate
 
         pf%DesiredRollingRate = rollingrate
-        if (Compare(pf%RollingRate, rollingrate, zero) /= 0) then
-            pf%RollingRate = rollingrate
-        end if
-
+        pf%RollingRate = rollingrate
         pf%UseSteadyRollingRate = .false.
     end subroutine
 
@@ -205,11 +257,7 @@ contains
 
         real*8 :: steady_pbar
 
-        steady_pbar = SteadyRollingRate(pf)
-        if (pf%RollingRate /= steady_pbar) then
-            pf%RollingRate = SteadyRollingRate(pf)
-        end if
-
+        pf%RollingRate = SteadyRollingRate(pf)
         pf%UseSteadyRollingRate = .true.
     end subroutine SetSteadyRollingRate
 
@@ -260,8 +308,8 @@ contains
     real*8 function CDi1(pf) result(cdi)
         type(Planform), intent(in) :: pf
 
-        cdi = (pf%CL1**2 * (1.0d0 + pf%KD) - pf%KDL * pf%CL1 * pf%CLa * pf%Omega + &
-            & pf%KDW * (pf%CLa * pf%Omega)**2) / (pi * pf%AspectRatio)
+        cdi = (pf%CL1**2 * (1.0d0 + pf%KD) - pf%KDL * pf%CL1 * pf%CLa * pf%Washout + &
+            & pf%KDW * (pf%CLa * pf%Washout)**2) / (pi * pf%AspectRatio)
     end function CDi1
 
     real*8 function CDi2(pf) result(cdi)

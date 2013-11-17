@@ -13,6 +13,8 @@ contains
         type(Planform) :: pf
         character*2 :: inp = 'A'
 
+        call InitPlanform(pf)
+
         do while(inp /= 'Q')
             inp = PlanformParamters(pf)
             if (inp == 'A') then
@@ -48,8 +50,21 @@ contains
         ! Wing parameters
         write(6, '(2x, a)') "Wing Parameters:"
 
-        msg = "W - Toggle wing type"
+        msg = "WT - Edit wing type"
         call DisplayMessageWithTextDefault(msg, GetWingType(pf), 4)
+
+        if (pf%WingType == Combination) then
+            msg = "TP - Edit z/b at the transition point from tapered to elliptic"
+            call DisplayMessageWithRealDefault(msg, pf%TransitionPoint, 4)
+
+            msg = "TC - Edit c/b at the transition point from tapered to elliptic"
+            call DisplayMessageWithRealDefault(msg, pf%TransitionChord, 4)
+        end if
+
+        if (pf%WingType /= Elliptic) then
+            msg = "WD - Toggle washout distribution type"
+            call DisplayMessageWithTextDefault(msg, GetWashoutDistributionType(pf), 4)
+        end if
 
         msg = "N  - Edit number of nodes per semispan"
         call DisplayMessageWithIntegerDefault(msg, (pf%NNodes + 1) / 2, 4)
@@ -137,8 +152,11 @@ contains
         msg = "L - Edit lift coefficient"
         call DisplayMessageWithRealDefault(msg, pf%LiftCoefficient, 4)
 
-        msg = "W - Edit linear washout"
-        call DisplayMessageWithAngleDefault(msg, pf%Omega, 4)
+        msg = "O - Use optimum total washout"
+        call DisplayMessageWithLogicalDefault(msg, pf%UseOptimumWashout, 4)
+
+        msg = "W - Edit total amount of washout"
+        call DisplayMessageWithAngleDefault(msg, pf%Washout, 4)
 
         msg = "D - Edit aileron deflection"
         call DisplayMessageWithAngleDefault(msg, pf%AileronDeflection, 4)
@@ -168,8 +186,14 @@ contains
 
         ! Process input command
         ! Wing parameters
-        if (input == 'W') then
+        if (input == 'WT') then
             call EditWingType(pf)
+        else if (input == 'TP') then
+            call EditTransitionPoint(pf)
+        else if (input == 'TC') then
+            call EditTransitionChord(pf)
+        else if (input == 'WD') then
+            call EditWashoutDistribution(pf)
         else if (input == 'N') then
             call EditNNodes(pf)
         else if (input == 'RA') then
@@ -214,8 +238,10 @@ contains
             call EditAngleOfAttack(pf)
         else if (input == 'L') then
             call EditLiftCoefficient(pf)
+        else if (input == 'O') then
+            call ToggleUseOptimumWashout(pf)
         else if (input == 'W') then
-            call EditOmega(pf)
+            call EditWashout(pf)
         else if (input == 'D') then
             call EditAileronDeflection(pf)
         else if (input == 'S') then
@@ -251,6 +277,36 @@ contains
             call SetWingType(pf, Combination)
         end if
     end subroutine EditWingType
+
+    subroutine EditTransitionPoint(pf)
+        type(Planform), intent(inout) :: pf
+
+        character*80 :: msg
+
+        msg = "Enter z/b at the transition point from tapered to elliptic"
+        call DisplayMessageWithRealDefault(msg, pf%TransitionPoint, 0)
+        call SetTransitionPoint(pf, GetRealInput(0.0d0, 0.5d0, pf%TransitionPoint))
+    end subroutine EditTransitionPoint
+
+    subroutine EditTransitionChord(pf)
+        type(Planform), intent(inout) :: pf
+
+        character*80 :: msg
+
+        msg = "Enter c/b at the transition point from tapered to elliptic"
+        call DisplayMessageWithRealDefault(msg, pf%TransitionChord, 0)
+        call SetTransitionChord(pf, GetRealInput(0.0d0, 1.0d0, pf%TransitionChord))
+    end subroutine EditTransitionChord
+
+    subroutine EditWashoutDistribution(pf)
+        type(Planform), intent(inout) :: pf
+
+        if (pf%WashoutDistribution == Linear) then
+            call SetWashoutDistribution(pf, Optimum)
+        else
+            call SetWashoutDistribution(pf, Linear)
+        end if
+    end subroutine EditWashoutDistribution
 
     subroutine EditNNodes(pf)
         type(Planform), intent(inout) :: pf
@@ -329,12 +385,12 @@ contains
 
         write(6, *)
         if (pf%ParallelHingeLine) then
-            write(6, '(a)') "NOTE: Calculation of flap fraction at aileron root has been disabled."
+            write(6, '(a)') "NOTE: Aileron hinge is no longer constrained to be parallel with quarter-chord line."
         end if
 
         msg = "Enter new cf/c at aileron root or press <ENTER> to accept default"
-        call DisplayMessageWithRealDefault(msg, pf%FlapFractionRoot, 0)
-        call SetFlapFractionRoot(pf, GetRealInput(0.0d0, 1.0d0, pf%FlapFractionRoot))
+        call DisplayMessageWithRealDefault(msg, pf%DesiredFlapFractionRoot, 0)
+        call SetFlapFractionRoot(pf, GetRealInput(0.0d0, 1.0d0, pf%DesiredFlapFractionRoot))
     end subroutine EditFlapFractionRoot
 
     subroutine EditFlapFractionTip(pf)
@@ -352,7 +408,7 @@ contains
         type(Planform), intent(inout) :: pf
 
         if (pf%ParallelHingeLine) then
-            call SetFlapFractionRoot(pf, pf%FlapFractionRoot)
+            call SetFlapFractionRoot(pf, pf%DesiredFlapFractionRoot)
         else
             call SetParallelHingeLine(pf)
         end if
@@ -412,8 +468,8 @@ contains
         character*80 :: msg
         real*8 :: mn, mx, dflt
 
-        mn = CL1(pf%CLa, -12.0d0 * pi / 180.0d0, pf%EW, pf%Omega)
-        mx = CL1(pf%CLa,  12.0d0 * pi / 180.0d0, pf%EW, pf%Omega)
+        mn = CL1(pf%CLa, -12.0d0 * pi / 180.0d0, pf%EW, pf%Washout)
+        mx = CL1(pf%CLa,  12.0d0 * pi / 180.0d0, pf%EW, pf%Washout)
         if (pf%DesiredLiftCoefficient < mn) then
             dflt = mn
         else if (pf%DesiredLiftCoefficient > mx) then
@@ -429,16 +485,29 @@ contains
         call SetLiftCoefficient(pf, GetRealInput(mn, mx, dflt))
     end subroutine EditLiftCoefficient
 
-    subroutine EditOmega(pf)
+    subroutine EditWashout(pf)
         type(Planform), intent(inout) :: pf
 
         character*80 :: msg
 
         write(6, *)
-        msg = "Enter linear washout or press <ENTER> to accept default"
-        call DisplayMessageWithAngleDefault(msg, pf%Omega, 0)
-        call SetOmega(pf, GetRealInput(-12.0d0, 12.0d0, pf%Omega * 180.0d0 / pi))
-    end subroutine EditOmega
+        if (pf%UseOptimumWashout) then
+            write(6, '(a)') "NOTE: Use of optimum total washout has been disabled."
+        end if
+        msg = "Enter total washout or press <ENTER> to accept default"
+        call DisplayMessageWithAngleDefault(msg, pf%DesiredWashout, 0)
+        call SetWashout(pf, GetRealInput(-12.0d0, 12.0d0, pf%DesiredWashout * 180.0d0 / pi))
+    end subroutine EditWashout
+
+    subroutine ToggleUseOptimumWashout(pf)
+        type(Planform), intent(inout) :: pf
+
+        if (pf%UseOptimumWashout) then
+            call SetWashout(pf, pf%DesiredWashout * 180.0d0 / pi)
+        else
+            call SetOptimumWashout(pf)
+        end if
+    end subroutine ToggleUseOptimumWashout
 
     subroutine EditAileronDeflection(pf)
         type(Planform), intent(inout) :: pf
@@ -471,7 +540,7 @@ contains
         write(6, *)
 
         if (pf%UseSteadyRollingRate) then
-            write(6, '(a)') "NOTE: Calculation of steady rolling rate has been disabled."
+            write(6, '(a)') "NOTE: Use of steady rolling rate has been disabled."
         end if
 
         msg = "Enter dimensionless rolling rate or press <ENTER> to accept default"
