@@ -28,6 +28,13 @@ contains
         end if
     end function Compare
 
+    real*8 function Residual(oldVal, newVal) result(res)
+        real*8, intent(in) :: oldVal
+        real*8, intent(in) :: newVal
+
+        res = dabs(oldVal - newVal) / max(dabs(oldVal), dabs(newVal))
+    end function Residual
+
     integer function CompareFiles(a, b) result(badline)
         character*80, intent(in) :: a, b  ! Filenames of files to compare
 

@@ -17,6 +17,9 @@ contains
         if (.not. pf%IsAllocated) then
             call AllocateArrays(pf)
 
+            if (pf%WingType == Combination) then
+                call ComputeCombinationWingCoefficients(pf)
+            end if
             call ComputeC(pf, pf%BigC)
             call ComputeCInverse(pf, pf%BigC_Inv)
             call ComputeFourierCoefficients_a(pf, pf%a)
@@ -308,6 +311,83 @@ contains
                 & 1.0d0) * bigA(i-1) * bigA(i)
         end do
     end function CYaw
+
+    subroutine ComputeCombinationWingCoefficients(pf)
+        type(Planform), intent(inout) :: pf
+
+        integer :: i
+        real*8 :: resC2, resC3, resC4, resC5
+
+        ! Initialize residuals
+        resC2 = 1.0d0
+        resC3 = 1.0d0
+        resC4 = 1.0d0
+        resC5 = 1.0d0
+
+        ! Make an initial guess for each value
+        pf%C1 = pf%TransitionPoint
+        pf%C2 = 1.0d0
+        pf%C3 = pf%TransitionChord
+        pf%C4 = pf%TransitionPoint
+        pf%C5 = pf%TransitionChord
+
+        ! Iteratively solve until converged
+        i = 0
+        do while(resC2 > zero .and. resC3 > zero .and. &
+            & resC4 > zero .and. resC5 > zero)
+            resC2 = C2(pf)
+            resC3 = C3(pf)
+            resC4 = C4(pf)
+            resC5 = C5(pf)
+
+            i = i + 1
+            if (i > 1000) then
+                write(6, '(a)') "The coefficients in the wing-planform equations could not be determined."
+                stop
+            end if
+        end do
+    end subroutine ComputeCombinationWingCoefficients
+
+    real*8 function C2(pf) result(res)
+        type(Planform), intent(inout) :: pf
+
+        real*8 :: oldC2
+
+        oldC2 = pf%C2
+        pf%C2 = (pf%C5 - pf%TransitionChord) / (pf%C1 * pf%C5)
+        res = Residual(oldC2, pf%C2)
+    end function C2
+
+    real*8 function C3(pf) result(res)
+        type(Planform), intent(inout) :: pf
+
+        real*8 :: oldC3
+
+        oldC3 = pf%C3
+        pf%C3 = (1.0d0 - pf%C1 * pf%C2) / sqrt(1.0d0 - &
+            & ((pf%C1 - pf%C4) / (0.5d0 - pf%C4))**2)
+        res = Residual(oldC3, pf%C3)
+    end function C3
+
+    real*8 function C4(pf) result(res)
+        type(Planform), intent(inout) :: pf
+
+        real*8 :: oldC4
+
+        oldC4 = pf%C4
+        pf%C4 = 0.0d0
+        res = Residual(oldC4, pf%C4)
+    end function C4
+
+    real*8 function C5(pf) result(res)
+        type(Planform), intent(inout) :: pf
+
+        real*8 :: oldC5
+
+        oldC5 = pf%C5
+        pf%C5 = 0.0d0
+        res = Residual(oldC5, pf%C5)
+    end function C5
 
     subroutine ComputeC(pf, c)
         type(Planform), intent(in) :: pf

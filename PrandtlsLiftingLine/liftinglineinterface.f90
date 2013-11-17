@@ -248,7 +248,7 @@ contains
         else if (inp == "E") then
             call SetWingType(pf, Elliptic)
         else if (inp == "C") then
-            call SetWingType(pf, TaperedElliptic)
+            call SetWingType(pf, Combination)
         end if
     end subroutine EditWingType
 

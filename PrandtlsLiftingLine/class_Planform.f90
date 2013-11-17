@@ -6,7 +6,7 @@ module class_Planform
 
     ! Supported wing types
     enum, bind(C)
-        enumerator :: Tapered = 1, Elliptic = 2, TaperedElliptic = 3
+        enumerator :: Tapered = 1, Elliptic = 2, Combination = 3
     end enum
 
     type Planform
@@ -15,6 +15,8 @@ module class_Planform
         integer :: NNodes = 7 ! Total number of nodes
         real*8 :: AspectRatio = 5.56d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
+        real*8 :: TransitionPoint = 0.25d0 ! Transition point (Combination wing only)
+        real*8 :: TransitionChord = 0.5d0 ! c/b at transtion point (Combination wing only)
         real*8 :: SectionLiftSlope = 2.0d0 * pi ! Section lift slope
         real*8 :: AileronRoot = 0.253d0 ! Location of aileron root (z/b)
         real*8 :: AileronTip = 0.438d0 ! Location of aileron tip (z/b)
@@ -25,6 +27,13 @@ module class_Planform
         real*8 :: FlapFractionTip = 0.25d0 ! Flap fraction at aileron tip (cf/c)
         real*8 :: HingeEfficiency = 0.85d0 ! Aileron hinge efficiency
         real*8 :: DeflectionEfficiency = 1.0d0 ! Aileron deflection efficiency
+
+        ! Coefficients for Tapered wing with elliptic tip
+        real*8 :: C1 = 0.0d0 ! Represents transition point
+        real*8 :: C2 = 0.0d0 ! Represents slope of tapered section
+        real*8 :: C3 = 0.0d0 ! Represents secondary axis of ellipse
+        real*8 :: C4 = 0.0d0 ! Represents ellipse center offset
+        real*8 :: C5 = 0.0d0 ! Represents croot/b
 
         ! Output Options
         logical :: OutputMatrices = .true.  ! Write C Matrix and Fourier coefficients to output file?
@@ -75,7 +84,6 @@ module class_Planform
         real*8 :: CRM      ! Rolling moment coefficient
         real*8 :: CYM      ! Yawing moment coefficient
 
-
     end type Planform
 
     contains
@@ -86,6 +94,8 @@ module class_Planform
                 name = "Tapered"
             else if (pf%WingType .eq. Elliptic) then
                 name = "Elliptic"
+            else if (pf%WingType .eq. Combination) then
+                name = "Tapered with elliptic tip"
             else
                 name = "Unknown"
             end if
@@ -154,6 +164,9 @@ module class_Planform
                 ! Calculate c/b for elliptic wing
                 cb = (4.0d0 * sin(theta)) / &
                     & (pi * pf%AspectRatio)
+            else if (pf%WingType == Combination) then
+                ! Calculate c/b for combination wing
+
             else
                 ! Unknown wing type!
                 stop "*** Unknown Wing Type ***"
@@ -230,6 +243,7 @@ module class_Planform
                 deallocate(pf%BigA)
                 deallocate(pf%BigC)
                 deallocate(pf%BigC_Inv)
+
                 pf%IsAllocated = .false.
             end if
         end subroutine DeallocateArrays
