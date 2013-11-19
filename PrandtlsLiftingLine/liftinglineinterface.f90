@@ -54,10 +54,10 @@ contains
         call DisplayMessageWithTextDefault(msg, GetWingType(pf), 4)
 
         if (pf%WingType == Combination) then
-            msg = "TP - Edit z/b at the transition point from tapered to elliptic"
+            msg = "TP - Edit z/b at the transition from tapered to elliptic"
             call DisplayMessageWithRealDefault(msg, pf%TransitionPoint, 4)
 
-            msg = "TC - Edit c/b at the transition point from tapered to elliptic"
+            msg = "TC - Edit c/croot at the transition from tapered to elliptic"
             call DisplayMessageWithRealDefault(msg, pf%TransitionChord, 4)
         end if
 
@@ -282,20 +282,50 @@ contains
         type(Planform), intent(inout) :: pf
 
         character*80 :: msg
+        real*8 :: tp_old
+        logical :: isValid
+
+        tp_old = pf%TransitionPoint
 
         msg = "Enter z/b at the transition point from tapered to elliptic"
         call DisplayMessageWithRealDefault(msg, pf%TransitionPoint, 0)
         call SetTransitionPoint(pf, GetRealInput(0.0d0, 0.5d0, pf%TransitionPoint))
+
+        isValid = AreCombinationWingCoefficientsValid(pf)
+        do while(.not. isValid)
+            call SetTransitionPoint(pf, tp_old)
+            write(6, *)
+            write(6, '(a)') "The input provided results in invalid ellipse coefficients."
+            write(6, '(a)') "Try a new value or press <ENTER> to accept default."
+
+            call SetTransitionPoint(pf, GetRealInput(0.0d0, 0.5d0, pf%TransitionPoint))
+            isValid = AreCombinationWingCoefficientsValid(pf)
+        end do
     end subroutine EditTransitionPoint
 
     subroutine EditTransitionChord(pf)
         type(Planform), intent(inout) :: pf
 
         character*80 :: msg
+        real*8 :: tc_old
+        logical :: isValid
 
-        msg = "Enter c/b at the transition point from tapered to elliptic"
+        tc_old = pf%TransitionChord
+
+        msg = "Enter c/croot at the transition point from tapered to elliptic"
         call DisplayMessageWithRealDefault(msg, pf%TransitionChord, 0)
-        call SetTransitionChord(pf, GetRealInput(0.0d0, 1.0d0, pf%TransitionChord))
+        call SetTransitionChord(pf, GetRealInput(0.0d0, 2.0d0, pf%TransitionChord))
+
+        isValid = AreCombinationWingCoefficientsValid(pf)
+        do while(.not. isValid)
+            call SetTransitionChord(pf, tc_old)
+            write(6, *)
+            write(6, '(a)') "The input provided results in invalid ellipse coefficients."
+            write(6, '(a)') "Try a new value or press <ENTER> to accept default."
+
+            call SetTransitionChord(pf, GetRealInput(0.0d0, 2.0d0, pf%TransitionChord))
+            isValid = AreCombinationWingCoefficientsValid(pf)
+        end do
     end subroutine EditTransitionChord
 
     subroutine EditWashoutDistribution(pf)

@@ -18,7 +18,9 @@ contains
             pf%WingType = wingType
             call DeallocateArrays(pf)
 
-            if (pf%ParallelHingeLine) then
+            if (pf%WingType == Combination) then
+                call SetCombinationWingCoefficients(pf)
+            else if (pf%ParallelHingeLine) then
                 call SetParallelHingeLine(pf)
             end if
             if (pf%WingType == Elliptic) then
@@ -44,6 +46,7 @@ contains
         if (Compare(pf%TransitionPoint, tp, zero) /= 0) then
             pf%TransitionPoint = tp
             call DeallocateArrays(pf)
+            call SetCombinationWingCoefficients(pf)
         end if
     end subroutine SetTransitionPoint
 
@@ -54,8 +57,56 @@ contains
         if (Compare(pf%TransitionChord, tc, zero) /= 0) then
             pf%TransitionChord = tc
             call DeallocateArrays(pf)
+            call SetCombinationWingCoefficients(pf)
         end if
     end subroutine SetTransitionChord
+
+    subroutine SetCombinationWingCoefficients(pf)
+        type(Planform), intent(inout) :: pf
+
+        real*8 :: u, asin_u
+
+        pf%C1 = pf%TransitionPoint
+        pf%C2 = (1.0d0 - pf%TransitionChord) / pf%C1
+        pf%C4 = (pf%C1 - 2.0d0 * pf%C1**2 * pf%C2 + 0.25d0 * pf%C2) / &
+            & (pf%C1 * pf%C2 - pf%C2 + 1.0d0)
+        u = (pf%C1 - pf%C4) / (0.5d0 - pf%C4)
+        asin_u = asin(u)
+        pf%C3 = (1.0d0 - pf%C1 * pf%C2) / sqrt(1.0d0 - u**2)
+        pf%C5 = 1.0d0 / (pf%AspectRatio * (2.0d0 * pf%C1 - pf%C1**2 * pf%C2 + &
+            & 0.5d0 * pf%C3 * (0.5d0 - pf%C4) * (pi - 2.0d0 * asin_u - &
+            & sin(2.0d0 * asin_u))))
+        !pf%C5 = 1.0d0 / (2.0d0 * pf%AspectRatio * &
+        !    & (pf%C1 - 0.5d0 * pf%C1**2 * pf%C2 + &
+        !    & 0.25d0 * pf%C3 * (0.5d0 - pf%C4) * &
+        !    & (0.5d0 * pi - sin(2.0d0 * asin_u) - asin_u)))
+
+        if (pf%ParallelHingeLine) then
+            call SetParallelHingeLine(pf)
+        end if
+    end subroutine SetCombinationWingCoefficients
+
+    logical function AreCombinationWingCoefficientsValid(pf) result(isValid)
+        type(Planform), intent(in) :: pf
+
+        real*8 :: u
+
+        u = (pf%C1 - pf%C4) / (0.5d0 - pf%C4)
+
+        if (Compare(pf%C1, 0.0d0, zero) == 0) then
+            isValid = .false.
+        else if (Compare(pf%C1 * pf%C2 - pf%C2 + 1.0d0, 0.0d0, zero) == 0) then
+            isValid = .false.
+        else if (Compare(pf%C4, 0.5d0, zero) == 0) then
+            isValid = .false.
+        else if (Compare(u, 0.0d0, zero) /= 1) then
+            isValid = .false.
+        else if (Compare(u, 1.0d0, zero) /= -1) then
+            isValid = .false.
+        else
+            isValid = .true.
+        end if
+    end function AreCombinationWingCoefficientsValid
 
     subroutine SetNNodes(pf, npss)
         type(Planform), intent(inout) :: pf

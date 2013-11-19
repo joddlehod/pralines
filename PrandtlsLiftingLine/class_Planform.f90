@@ -18,11 +18,11 @@ module class_Planform
         ! Wing Parameters
         integer :: WingType = Tapered ! Wing type
         integer :: WashoutDistribution = Linear ! Washout distribution type
-        integer :: NNodes = 7 ! Total number of nodes
+        integer :: NNodes = 99 ! Total number of nodes
         real*8 :: AspectRatio = 5.56d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
         real*8 :: TransitionPoint = 0.25d0 ! Transition point (Combination wing only)
-        real*8 :: TransitionChord = 0.5d0 ! c/b at transtion point (Combination wing only)
+        real*8 :: TransitionChord = 0.5d0 ! c/croot at transtion point (Combination wing only)
         real*8 :: SectionLiftSlope = 2.0d0 * pi ! Section lift slope
         real*8 :: AileronRoot = 0.253d0 ! Location of aileron root (z/b)
         real*8 :: AileronTip = 0.438d0 ! Location of aileron tip (z/b)
@@ -179,6 +179,8 @@ module class_Planform
             type(Planform), intent(in) :: pf
             real*8, intent(in) :: theta
 
+            real*8 :: zb, u
+
             if (pf%WingType == Tapered) then
                 ! Calculate c/b for tapered wing
                 cb = (2.0d0 * (1.0d0 - (1.0d0 - pf%TaperRatio) * &
@@ -189,7 +191,13 @@ module class_Planform
                     & (pi * pf%AspectRatio)
             else if (pf%WingType == Combination) then
                 ! Calculate c/b for combination wing
-
+                zb = abs(z_over_b(theta))
+                if (zb <= pf%TransitionPoint) then
+                    cb = pf%C5 * (1.0d0 - pf%C2 * zb)
+                else
+                    u = (zb - pf%C4) / (0.5d0 - pf%C4)
+                    cb = pf%C5 * pf%C3 * sqrt(1.0d0 - u**2)
+                end if
             else
                 ! Unknown wing type!
                 stop "*** Unknown Wing Type ***"

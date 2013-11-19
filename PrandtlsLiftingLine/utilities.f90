@@ -298,8 +298,8 @@ contains
                     width = ndigits + 1  ! e.g. 123.45 - 5 digits + 1 other
                 end if
 
-                if (order < 0) then
-                    width = width + 1  ! e.g. -0.012345 - additional for leading 0
+                if (order <= 0) then
+                    width = width - order + 1  ! e.g. -0.012345 - additional for leading 0
                 end if
 
                 write(real_fmt, '(a, i2, a, i2, a)') "(F", width, ".", &

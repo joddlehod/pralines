@@ -118,24 +118,15 @@ contains
         integer, intent(in) :: u
         type(Planform), intent(in) :: pf
 
-        character*8 :: wtype
         character*80 :: fmt_str
         integer :: len_nnodes
-
-        if (pf%WingType == Tapered) then
-            wtype = "Tapered"
-        else if (pf%WingType == Elliptic) then
-            wtype = "Elliptic"
-        else
-            wtype = "Unknown"
-        end if
 
         len_nnodes = int(log10(real(pf%NNodes))) + 1
         write(fmt_str, '(a,i1,a,i1,a)') "(2x, a15, 11x, 1x, a1, 3x, i", &
             & len_nnodes, ", 1x, a, i", len_nnodes, ",a)"
 
         write(u, '(a)') "Planform Summary:"
-        write(u, '(2x, a9, 17x, 1x, a1, 3x, a)') "Wing type", "=", wtype
+        write(u, '(2x, a9, 17x, 1x, a1, 3x, a)') "Wing type", "=", GetWingType(pf)
         write(u, fmt_str) "Number of nodes", "=", pf%NNodes, " (", &
             & (pf%NNodes + 1) / 2, " nodes per semispan)"
         write(u, '(2x, a26, 1x, a1, f20.15)') &

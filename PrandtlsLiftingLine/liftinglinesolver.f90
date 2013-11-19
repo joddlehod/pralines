@@ -18,8 +18,9 @@ contains
             call AllocateArrays(pf)
 
             if (pf%WingType == Combination) then
-                call ComputeCombinationWingCoefficients(pf)
+                call SetCombinationWingCoefficients(pf)
             end if
+
             call ComputeC(pf, pf%BigC)
             call ComputeCInverse(pf, pf%BigC_Inv)
             call ComputeFourierCoefficients_a(pf, pf%a)
@@ -44,7 +45,7 @@ contains
 
         nnodes = pf%NNodes
         ones = (/ (1.0d0, i=1, nnodes) /)
-        if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+        if (pf%WingType == Tapered .and. Compare(pf%TaperRatio, 0.0d0, zero) == 0) then
             ones(1) = 0.0d0
             ones(nnodes) = 0.0d0
         end if
@@ -64,7 +65,7 @@ contains
         nnodes = pf%NNodes
         if (pf%WashoutDistribution == Linear) then
             omega = (/ (dabs(cos(theta_i(i, nnodes))), i=1, nnodes) /)
-            if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+            if (pf%WingType == Tapered .and. Compare(pf%TaperRatio, 0.0d0, zero) == 0) then
                 omega(1) = 0.0d0
                 omega(nnodes) = 0.0d0
             end if
@@ -102,7 +103,7 @@ contains
             end if
         end do
 
-        if (pf%WingType == Tapered .and. pf%TaperRatio < zero) then
+        if (pf%WingType == Tapered .and. Compare(pf%TaperRatio, 0.0d0, zero) == 0) then
             chi(1) = 0.0d0
             chi(nnodes) = 0.0d0
         end if
@@ -120,7 +121,7 @@ contains
 
         nnodes = pf%NNodes
         cos_theta = (/ (cos(theta_i(i, nnodes)), i=1, nnodes) /)
-        if (pf%WingType == Tapered .and. pf%TaperRatio < 1.0d-10) then
+        if (pf%WingType == Tapered .and. Compare(pf%TaperRatio, 0.0d0, zero) == 0) then
             cos_theta(1) = 0.0d0
             cos_theta(nnodes) = 0.0d0
         end if
@@ -326,87 +327,10 @@ contains
             & pi * pf%AspectRatio / 8.0d0 * (10.0d0 * bigA(2) - &
             & pf%RollingRate) * bigA(3)
         do i = 4, nnodes
-            cym = cym + pi * pf%AspectRatio / 4.0d0 * (2.0d0 * real(i, 8) - &
-                & 1.0d0) * bigA(i-1) * bigA(i)
+            cym = cym + 0.25d0 * pi * pf%AspectRatio * &
+                & (2.0d0 * real(i, 8) - 1.0d0) * bigA(i-1) * bigA(i)
         end do
     end function CYaw
-
-    subroutine ComputeCombinationWingCoefficients(pf)
-        type(Planform), intent(inout) :: pf
-
-        integer :: i
-        real*8 :: resC2, resC3, resC4, resC5
-
-        ! Initialize residuals
-        resC2 = 1.0d0
-        resC3 = 1.0d0
-        resC4 = 1.0d0
-        resC5 = 1.0d0
-
-        ! Make an initial guess for each value
-        pf%C1 = pf%TransitionPoint
-        pf%C2 = 1.0d0
-        pf%C3 = pf%TransitionChord
-        pf%C4 = pf%TransitionPoint
-        pf%C5 = pf%TransitionChord
-
-        ! Iteratively solve until converged
-        i = 0
-        do while(resC2 > zero .and. resC3 > zero .and. &
-            & resC4 > zero .and. resC5 > zero)
-            resC2 = C2(pf)
-            resC3 = C3(pf)
-            resC4 = C4(pf)
-            resC5 = C5(pf)
-
-            i = i + 1
-            if (i > 1000) then
-                write(6, '(a)') "The coefficients in the wing-planform equations could not be determined."
-                stop
-            end if
-        end do
-    end subroutine ComputeCombinationWingCoefficients
-
-    real*8 function C2(pf) result(res)
-        type(Planform), intent(inout) :: pf
-
-        real*8 :: oldC2
-
-        oldC2 = pf%C2
-        pf%C2 = (pf%C5 - pf%TransitionChord) / (pf%C1 * pf%C5)
-        res = Residual(oldC2, pf%C2)
-    end function C2
-
-    real*8 function C3(pf) result(res)
-        type(Planform), intent(inout) :: pf
-
-        real*8 :: oldC3
-
-        oldC3 = pf%C3
-        pf%C3 = (1.0d0 - pf%C1 * pf%C2) / sqrt(1.0d0 - &
-            & ((pf%C1 - pf%C4) / (0.5d0 - pf%C4))**2)
-        res = Residual(oldC3, pf%C3)
-    end function C3
-
-    real*8 function C4(pf) result(res)
-        type(Planform), intent(inout) :: pf
-
-        real*8 :: oldC4
-
-        oldC4 = pf%C4
-        pf%C4 = 0.0d0
-        res = Residual(oldC4, pf%C4)
-    end function C4
-
-    real*8 function C5(pf) result(res)
-        type(Planform), intent(inout) :: pf
-
-        real*8 :: oldC5
-
-        oldC5 = pf%C5
-        pf%C5 = 0.0d0
-        res = Residual(oldC5, pf%C5)
-    end function C5
 
     subroutine ComputeC(pf, c)
         type(Planform), intent(in) :: pf
@@ -445,7 +369,7 @@ contains
         nnode = pf%NNodes
         do j = 1, nnode
             jsq = j**2
-            c(1, j) = real(j**2, 8)
+            c(1, j) = real(jsq, 8)
             c(nnode, j) = real((-1)**(j + 1) * jsq, 8)
         end do
 
@@ -489,6 +413,14 @@ contains
         if (pf%WingType == Tapered) then
             ! TODO: Add code for RT = 0.0 here!
         else if (pf%WingType == Elliptic) then
+            do j = 1, pf%NNodes
+                c(1, j) = c(1, j) + real(j, 8) * pi * &
+                    & pf%AspectRatio / pf%SectionLiftSlope
+                c(n, j) = c(n, j) + real((-1)**(j + 1) * j, 8) * pi * &
+                    & pf%AspectRatio / pf%SectionLiftSlope
+            end do
+        else if (pf%WingType == Combination) then
+            ! TODO: Add code for combination wing type
             do j = 1, pf%NNodes
                 c(1, j) = c(1, j) + real(j, 8) * pi * &
                     & pf%AspectRatio / pf%SectionLiftSlope
