@@ -9,7 +9,7 @@ contains
         integer :: i
 
         ! Generate temporary text file for plotting
-        open(unit=11, file='geometry1.dat')
+        open(unit=11, file='planform.dat')
         write(11, '(a)') "$ Planform Geometry"
 
         ! Write data points for planform
@@ -56,66 +56,7 @@ contains
         ! Close the geometry file
         close(unit=11)
 
-        ! Generate a template file to display the geometry appropriately
-        open(unit=12, file='geometry1.qtp')
-        write(12, '(a)') "ES-Plot Template File, version 1.2	   "
-        write(12, '(a)') "   6.000000       3.000000    		   "
-        write(12, '(a)') " -0.5000000      0.5000000    		   "
-        write(12, '(a)') " -0.1717499      5.7249978E-02		   "
-        write(12, '(a)') "   1.000000    						   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "           2							   "
-        write(12, '(a)') " T									   "
-        write(12, '(a)') " T									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') " T									   "
-        write(12, '(a)') "Planform Geometry						   "
-        write(12, '(a)') "   1.500000    						   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "   1.000000    						   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "z/b                                      "
-        write(12, '(a)') " -0.6000000      0.6000000      0.2000000"
-        write(12, '(a)') " F									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') "           4							   "
-        write(12, '(a)') "c/b                                      "
-        write(12, '(a)') " -0.4000000      0.2000000      0.1000000"
-        write(12, '(a)') " F									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') "           4							   "
-        write(12, '(a)') "           3							   "
-        write(12, '(a)') "Wing 									   "
-        write(12, '(a)') " T									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "           0							   "
-        write(12, '(a)') "   1.000000    						   "
-        write(12, '(a)') "Right Aileron 						   "
-        write(12, '(a)') " T									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "           2							   "
-        write(12, '(a)') "           2							   "
-        write(12, '(a)') "           0							   "
-        write(12, '(a)') "   1.000000    						   "
-        write(12, '(a)') "Left Aileron 							   "
-        write(12, '(a)') " T									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') " F									   "
-        write(12, '(a)') "           1							   "
-        write(12, '(a)') "           2							   "
-        write(12, '(a)') "           3							   "
-        write(12, '(a)') "           0							   "
-        write(12, '(a)') "   1.000000    						   "
-        close(unit=12)
-
-
         ! System call to plot planform
-        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" geometry1.dat geometry1.qtp')
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" planform.dat planform.qtp')
     end subroutine PlotPlanform
 end module LiftingLinePlotting

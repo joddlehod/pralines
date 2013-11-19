@@ -20,13 +20,9 @@ contains
             if (inp == 'A') then
                 call ComputeCMatrixAndCoefficients(pf)
                 call OutputPlanform(pf)
-                call PlotPlanform(pf)
                 do while(inp /= 'Q' .and. inp /= 'B')
                     inp = OperatingConditions(pf)
-                    if (inp == 'E') then
-                        call OutputFlightConditions(pf)
-                        call system('pause')
-                    else if (inp /= 'Q') then
+                    if (inp /= 'Q') then
                         call UpdateOperatingConditions(pf, inp)
                     end if
                 end do
@@ -79,41 +75,42 @@ contains
 
         msg = "S  - Edit section lift slope"
         call DisplayMessageWithRealDefault(msg, pf%SectionLiftSlope, 4)
-        write(6, *)
 
         ! Aileron parameters
+        write(6, *)
         write(6, '(2x, a)') "Aileron Parameters:"
 
-        msg = "AR - Edit z/b of aileron root"
+        msg = "ZR - Edit z/b of aileron root"
         call DisplayMessageWithRealDefault(msg, pf%AileronRoot, 4)
 
-        msg = "AT - Edit z/b of aileron tip"
+        msg = "ZT - Edit z/b of aileron tip"
         call DisplayMessageWithRealDefault(msg, pf%AileronTip, 4)
 
-        msg = "P  - Make hinge line parallel with quarter-chord line?"
+        msg = "PH - Make hinge line parallel with quarter-chord line?"
         call DisplayMessageWithLogicalDefault(msg, pf%ParallelHingeLine, 4)
 
-        msg = "FR - Edit cf/c of aileron root"
+        msg = "CR - Edit cf/c of aileron root"
         call DisplayMessageWithRealDefault(msg, pf%FlapFractionRoot, 4)
 
-        msg = "FT - Edit cf/c of aileron tip"
+        msg = "CT - Edit cf/c of aileron tip"
         call DisplayMessageWithRealDefault(msg, pf%FlapFractionTip, 4)
 
-        msg = "H  - Edit aileron hinge efficiency"
+        msg = "HE - Edit aileron hinge efficiency"
         call DisplayMessageWithRealDefault(msg, pf%HingeEfficiency, 4)
 
-        msg = "D  - Edit aileron deflection efficiency"
+        msg = "DE - Edit aileron deflection efficiency"
         call DisplayMessageWithRealDefault(msg, pf%DeflectionEfficiency, 4)
 
+        ! Output and Plotting options
         write(6, *)
-
-        ! Output options
-        write(6, '(2x, a)') "Output Options:"
+        write(6, '(2x, a)') "Output and Plotting Options:"
         msg = "C  - Output C matrix and Fourier Coefficients?"
         call DisplayMessageWithLogicalDefault(msg, pf%OutputMatrices, 4)
 
         msg = "F  - Edit output file name"
         call DisplayMessageWithTextDefault(msg, pf%FileName, 4)
+
+        write(6, '(4x, a)') "P  - Plot planform in ES-Plot"
 
         ! Main Execution commands
         write(6, *)
@@ -146,31 +143,38 @@ contains
         write(6, *)
         write(6, '(2x, a)') "Operating Conditions:"
 
-        msg = "A - Edit root aerodynamic angle of attack"
+        msg = "AA - Edit root aerodynamic angle of attack"
         call DisplayMessageWithAngleDefault(msg, pf%AngleOfAttack, 4)
 
-        msg = "L - Edit lift coefficient"
+        msg = "LC - Edit lift coefficient"
         call DisplayMessageWithRealDefault(msg, pf%LiftCoefficient, 4)
 
-        msg = "O - Use optimum total washout"
+        msg = "OW - Use optimum total washout"
         call DisplayMessageWithLogicalDefault(msg, pf%UseOptimumWashout, 4)
 
-        msg = "W - Edit total amount of washout"
+        msg = "W  - Edit total amount of washout"
         call DisplayMessageWithAngleDefault(msg, pf%Washout, 4)
 
-        msg = "D - Edit aileron deflection"
+        msg = "AD - Edit aileron deflection"
         call DisplayMessageWithAngleDefault(msg, pf%AileronDeflection, 4)
 
-        msg = "S - Use steady dimensionless rolling rate"
+        msg = "SR - Use steady dimensionless rolling rate"
         call DisplayMessageWithLogicalDefault(msg, pf%UseSteadyRollingRate, 4)
 
-        msg = "R - Edit dimensionless rolling rate"
+        msg = "R  - Edit dimensionless rolling rate"
         call DisplayMessageWithRealDefault(msg, pf%RollingRate, 4)
+
+        ! Output and Plotting options
+        write(6, *)
+        write(6, '(2x, a)') "Output and Plotting Options:"
+        msg = "S  - Save Flight coefficients to output file"
+        call DisplayMessageWithTextDefault(msg, pf%FileName, 4)
+
+        write(6, '(4x, a)') "P  - Plot Planform in ES-Plot"
 
         ! Main Execution commands
         write(6, *)
         write(6, '(2x, a)') "B - Back to Planform Parameters"
-        write(6, '(2x, a)') "E - Execute Solver for specified operating conditions"
         write(6, '(2x, a)') "Q - Quit"
 
         write(6, *)
@@ -204,19 +208,19 @@ contains
             call EditLiftSlope(pf)
 
         ! Aileron parameters
-        else if (input == 'AR') then
+        else if (input == 'ZR') then
             call EditAileronRoot(pf)
-        else if (input == 'AT') then
+        else if (input == 'ZT') then
             call EditAileronTip(pf)
-        else if (input == 'P') then
+        else if (input == 'PH') then
             call ToggleParallelHinge(pf)
-        else if (input == 'FR') then
+        else if (input == 'CR') then
             call EditFlapFractionRoot(pf)
-        else if (input == 'FT') then
+        else if (input == 'CT') then
             call EditFlapFractionTip(pf)
-        else if (input == 'H') then
+        else if (input == 'HE') then
             call EditHingeEfficiency(pf)
-        else if (input == 'D') then
+        else if (input == 'DE') then
             call EditDeflectionEfficiency(pf)
 
         ! Output options
@@ -224,7 +228,11 @@ contains
             pf%OutputMatrices = .not. pf%OutputMatrices
         else if (input == 'F') then
             call EditFileName(pf)
-        else if (input == 'X') then
+        else if (input == 'P') then
+            call PlotPlanform(pf)
+
+        ! Testing options
+        else if (input == 'T') then
             call TestLiftingLineSolver()
         end if
     end subroutine UpdatePlanformParameters
@@ -234,20 +242,27 @@ contains
         character*2, intent(in) :: input
 
         ! Operating Conditions
-        if (input == 'A') then
+        if (input == 'AA') then
             call EditAngleOfAttack(pf)
-        else if (input == 'L') then
+        else if (input == 'LC') then
             call EditLiftCoefficient(pf)
-        else if (input == 'O') then
+        else if (input == 'OW') then
             call ToggleUseOptimumWashout(pf)
         else if (input == 'W') then
             call EditWashout(pf)
-        else if (input == 'D') then
+        else if (input == 'AD') then
             call EditAileronDeflection(pf)
-        else if (input == 'S') then
+        else if (input == 'SR') then
             call ToggleUseSteadyRollingRate(pf)
         else if (input == 'R') then
             call EditRollingRate(pf)
+
+        ! Output and Plotting options
+        else if (input == 'S') then
+            call OutputFlightConditions(pf)
+            call system('pause')
+        else if (input == 'P') then
+            call PlotPlanform(pf)
         end if
 
         call ComputeFlightConditions(pf)
