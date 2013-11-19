@@ -499,7 +499,8 @@ contains
         character*80 :: msg
 
         write(6, *)
-        write(6, '(a)') "NOTE: This operation will calculate a new lift coefficient."
+        write(6, '(a, a)') "NOTE: This operation will calculate a new lift ", &
+            & "coefficient and optimum washout."
 
         msg = "Enter angle of attack or press <ENTER> to accept default"
         call DisplayMessageWithAngleDefault(msg, pf%DesiredAngleOfAttack, 0)
@@ -524,7 +525,8 @@ contains
         end if
 
         write(6, *)
-        write(6, '(a)') "NOTE: This operation will calculate a new root aerodynamic angle of attack."
+        write(6, '(a, a)') "NOTE: This operation will calculate a new alpha ", &
+            & "and optimum washout"
         msg = "Enter lift coefficient or press <ENTER> to accept default"
         call DisplayMessageWithRealDefault(msg, dflt, 0)
         call SetLiftCoefficient(pf, GetRealInput(mn, mx, dflt))

@@ -252,6 +252,9 @@ contains
         pf%SpecifyAlpha = .true.
         pf%DesiredAngleOfAttack = alpha * pi / 180.0d0
         pf%AngleOfAttack = pf%DesiredAngleOfAttack
+        if (pf%UseOptimumWashout) then
+            call SetOptimumWashout(pf)
+        end if
         pf%LiftCoefficient = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Washout)
     end subroutine SetAngleOfAttack
 
@@ -262,6 +265,9 @@ contains
         pf%SpecifyAlpha = .false.
         pf%DesiredLiftCoefficient = cl
         pf%LiftCoefficient = pf%DesiredLiftCoefficient
+        if (pf%UseOptimumWashout) then
+            call SetOptimumWashout(pf)
+        end if
         pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Washout)
     end subroutine SetLiftCoefficient
 
@@ -279,19 +285,59 @@ contains
         pf%DesiredWashout = washout * pi / 180.0d0
         pf%Washout = pf%DesiredWashout
         pf%UseOptimumWashout = .false.
+        if (pf%SpecifyAlpha) then
+            pf%LiftCoefficient = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, pf%Washout)
+        else
+            pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Washout)
+        end if
     end subroutine SetWashout
 
     subroutine SetOptimumWashout(pf)
         type(Planform), intent(inout) :: pf
 
-        pf%OptimumWashout1 = (pf%KDL * pf%LiftCoefficient) / &
-            & (2.0d0 * pf%KDW * pf%CLa)
+        logical :: cont
+        integer :: i
+        real*8 :: oldCL, newCL, resCL
+        real*8 :: oldOmega, newOmega, resOmega
+
+        if (pf%SpecifyAlpha) then
+            oldCL = pf%LiftCoefficient
+            oldOmega = pf%Washout
+            cont = .true.
+            i = 0
+            do while (cont .and. i < 1000)
+                i = i + 1
+                newOmega = OptimumWashout1(pf%KDL, oldCL, pf%KDW, pf%CLa)
+                newCL = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, newOmega)
+
+                resCL = Residual(oldCL, newCL)
+                resOmega = Residual(oldOmega, newOmega)
+
+                cont = (Compare(resCL, 0.0d0, zero) /= 0 .or. Compare(resOmega, 0.0d0, zero) /= 0)
+                oldOmega = newOmega
+                oldCL = newCL
+            end do
+
+            if (i >= 1000) then
+                stop "*** Max number of convergence iterations reached! ***"
+            else
+                pf%LiftCoefficient = newCL
+                pf%OptimumWashout1 = newOmega
+            end if
+        end if
+
+        pf%OptimumWashout1 = OptimumWashout1(pf%KDL, pf%LiftCoefficient, &
+            & pf%KDW, pf%CLa)
         if (pf%WashoutDistribution == Optimum) then
-            pf%OptimumWashout2 = (4.0d0 * pf%CL1) / (pi * pf%AspectRatio &
-                & * pf%SectionLiftSlope * c_over_b(pf, pi / 2.0d0))
+            pf%OptimumWashout2 = OptimumWashout2(pf, pf%LiftCoefficient, &
+                pf%AspectRatio, pf%SectionLiftSlope)
         end if
         pf%Washout = pf%OptimumWashout1
         pf%UseOptimumWashout = .true.
+
+        if (.not. pf%SpecifyAlpha) then
+            pf%AngleOfAttack = RootAlpha(pf%CLa, pf%LiftCoefficient, pf%EW, pf%Washout)
+        end if
     end subroutine SetOptimumWashout
 
     subroutine SetRollingRate(pf, rollingrate)
@@ -339,6 +385,24 @@ contains
         ! Calculate steady dimensionless rolling rate
         pbar_steady = -pf%CRM_da / pf%CRM_pbar * pf%AileronDeflection
     end function SteadyRollingRate
+
+    real*8 function OptimumWashout1(kdl, cl, kdw, cla) result(ow1)
+        real*8, intent(in) :: kdl
+        real*8, intent(in) :: cl
+        real*8, intent(in) :: kdw
+        real*8, intent(in) :: cla
+
+        ow1 = (kdl * cl) / (2.0d0 * kdw * cla)
+    end function OptimumWashout1
+
+    real*8 function OptimumWashout2(pf, cl, ra, ls) result(ow2)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: cl
+        real*8, intent(in) :: ra
+        real*8, intent(in) :: ls
+
+        ow2 = (4.0d0 * cl) / (pi * ra * ls * c_over_b(pf, pi / 2.0d0))
+    end function OptimumWashout2
 
     real*8 function CL1(cla, alpha, ew, w) result(cl)
         real*8, intent(in) :: cla
