@@ -59,4 +59,24 @@ contains
         ! System call to plot planform
         call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" planform.dat planform.qtp')
     end subroutine PlotPlanform
+
+    subroutine PlotWashout(pf)
+        type(Planform), intent(in) :: pf
+
+        integer :: i
+
+        open(unit=11, file='washout.dat')
+        write(11, '(a)') "Dimensionless Washout Distribution"
+
+        ! Write washout distribution
+        do i=1, pf%NNodes
+            write(11, '(f22.15, a, 2x, f22.15)') &
+                & z_over_b_i(i, pf%NNodes), ";", pf%Omega(i)
+        end do
+
+        close(unit=11)
+
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" washout.dat')
+    end subroutine PlotWashout
+
 end module LiftingLinePlotting

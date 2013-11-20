@@ -24,7 +24,7 @@ contains
             call ComputeC(pf, pf%BigC)
             call ComputeCInverse(pf, pf%BigC_Inv)
             call ComputeFourierCoefficients_a(pf, pf%a)
-            call ComputeFourierCoefficients_b(pf, pf%b)
+            call ComputeFourierCoefficients_b(pf, pf%b, pf%Omega)
             call ComputeFourierCoefficients_c(pf, pf%c)
             call ComputeFourierCoefficients_d(pf, pf%d)
 
@@ -53,11 +53,11 @@ contains
         a = matmul(pf%BigC_Inv, ones)
     end subroutine ComputeFourierCoefficients_a
 
-    subroutine ComputeFourierCoefficients_b(pf, b)
+    subroutine ComputeFourierCoefficients_b(pf, b, omega)
         type(Planform), intent(in) :: pf
         real*8, intent(out) :: b(pf%NNodes)
+        real*8, intent(out) :: omega(pf%NNodes)
 
-        real*8 :: omega(pf%NNodes)
         real*8 :: croot_over_b, theta
         integer :: i
         integer :: nnodes

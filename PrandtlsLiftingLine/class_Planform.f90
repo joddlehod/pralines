@@ -71,6 +71,7 @@ module class_Planform
         ! Planform Calculations
         real*8, allocatable, dimension(:,:) :: BigC, BigC_Inv
         real*8, allocatable, dimension(:) :: a, b, c, d, BigA
+        real*8, allocatable, dimension(:) :: Omega
         logical :: IsAllocated = .false.
 
         ! Lift Coefficient Calculations
@@ -267,13 +268,14 @@ module class_Planform
             type(Planform), intent(inout) :: pf
 
             if (pf%IsAllocated) then
+                deallocate(pf%BigC)
+                deallocate(pf%BigC_Inv)
                 deallocate(pf%a)
                 deallocate(pf%b)
                 deallocate(pf%c)
                 deallocate(pf%d)
                 deallocate(pf%BigA)
-                deallocate(pf%BigC)
-                deallocate(pf%BigC_Inv)
+                deallocate(pf%Omega)
 
                 pf%IsAllocated = .false.
             end if
@@ -291,6 +293,7 @@ module class_Planform
             allocate(pf%c(pf%NNodes))
             allocate(pf%d(pf%NNodes))
             allocate(pf%BigA(pf%NNodes))
+            allocate(pf%Omega(pf%NNodes))
             pf%IsAllocated = .true.
         end subroutine AllocateArrays
 

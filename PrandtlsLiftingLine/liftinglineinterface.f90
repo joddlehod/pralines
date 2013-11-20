@@ -110,7 +110,7 @@ contains
         msg = "F  - Edit output file name"
         call DisplayMessageWithTextDefault(msg, pf%FileName, 4)
 
-        write(6, '(4x, a)') "P  - Plot planform in ES-Plot"
+        write(6, '(4x, a)') "PP - Plot planform in ES-Plot"
 
         ! Main Execution commands
         write(6, *)
@@ -170,7 +170,8 @@ contains
         msg = "S  - Save Flight coefficients to output file"
         call DisplayMessageWithTextDefault(msg, pf%FileName, 4)
 
-        write(6, '(4x, a)') "P  - Plot Planform in ES-Plot"
+        write(6, '(4x, a)') "PP  - Plot Planform in ES-Plot"
+        write(6, '(4x, a)') "PW  - Plot Dimensionless Washout Distribution in ES-Plot"
 
         ! Main Execution commands
         write(6, *)
@@ -228,7 +229,7 @@ contains
             pf%OutputMatrices = .not. pf%OutputMatrices
         else if (input == 'F') then
             call EditFileName(pf)
-        else if (input == 'P') then
+        else if (input == 'PP') then
             call PlotPlanform(pf)
 
         ! Testing options
@@ -261,8 +262,10 @@ contains
         else if (input == 'S') then
             call OutputFlightConditions(pf)
             call system('pause')
-        else if (input == 'P') then
+        else if (input == 'PP') then
             call PlotPlanform(pf)
+        else if (input == 'PW') then
+            call PlotWashout(pf)
         end if
 
         call ComputeFlightConditions(pf)
