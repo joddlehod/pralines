@@ -146,7 +146,7 @@ contains
         msg = "AA - Edit root aerodynamic angle of attack"
         call DisplayMessageWithAngleDefault(msg, pf%AngleOfAttack, 4)
 
-        msg = "LC - Edit lift coefficient"
+        msg = "CL - Edit coefficient of lift"
         call DisplayMessageWithRealDefault(msg, pf%LiftCoefficient, 4)
 
         msg = "OW - Use optimum total washout"
@@ -244,7 +244,7 @@ contains
         ! Operating Conditions
         if (input == 'AA') then
             call EditAngleOfAttack(pf)
-        else if (input == 'LC') then
+        else if (input == 'CL') then
             call EditLiftCoefficient(pf)
         else if (input == 'OW') then
             call ToggleUseOptimumWashout(pf)

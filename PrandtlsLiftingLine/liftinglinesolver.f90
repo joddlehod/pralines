@@ -75,6 +75,14 @@ contains
                 theta = theta_i(i, nnodes)
                 omega(i) = 1.0d0 - sin(theta) / (c_over_b(pf, theta) / croot_over_b)
             end do
+
+            if (pf%WingType == Combination) then
+                omega(1) = 1.0d0 - sqrt(1.0d0 - 2.0d0 * pf%C4) / pf%C3
+                omega(nnodes) = omega(1)
+            else if (pf%WingType == Tapered .and. Compare(pf%TaperRatio, 0.0d0, zero) == 0) then
+                omega(1) = 2.0d0
+                omega(nnodes) = 2.0d0
+            end if
         else
             write(6, '(a)') "Unknown washout distribution type!"
             stop
@@ -411,9 +419,12 @@ contains
         n = pf%NNodes
 
         if (pf%WingType == Tapered) then
-            ! TODO: Add code for RT = 0.0 here!
+            do j = 1, n
+                c(1, j) = 2.0d0 * pf%AspectRatio * (1.0d0 + real(j, 8))
+                c(n, j) = real((-1)**(j + 1), 8) * c(1, j)
+            end do
         else if (pf%WingType == Elliptic) then
-            do j = 1, pf%NNodes
+            do j = 1, n
                 c(1, j) = c(1, j) + real(j, 8) * pi * &
                     & pf%AspectRatio / pf%SectionLiftSlope
                 c(n, j) = c(n, j) + real((-1)**(j + 1) * j, 8) * pi * &
@@ -421,7 +432,7 @@ contains
             end do
         else if (pf%WingType == Combination) then
             ! TODO: Add code for combination wing type
-            do j = 1, pf%NNodes
+            do j = 1, n
                 c(1, j) = c(1, j) + 4.0d0 * real(j, 8) * &
                     & sqrt(1.0d0 - 2.0d0 * pf%C4) / &
                     & (pf%C3 * pf%C5 * pf%SectionLiftSlope)
