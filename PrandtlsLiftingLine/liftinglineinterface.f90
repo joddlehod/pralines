@@ -134,6 +134,8 @@ contains
 
         ! Output the Planform summary
         call OutputPlanformSummary(6, pf)
+        call OutputOperatingConditions(6, pf)
+        call OutputFlightCoefficients(6, pf)
         write(6, *)
 
         ! Display options to user
@@ -164,12 +166,9 @@ contains
         msg = "R  - Edit dimensionless rolling rate"
         call DisplayMessageWithRealDefault(msg, pf%RollingRate, 4)
 
-        ! Output and Plotting options
+        ! Plotting options
         write(6, *)
-        write(6, '(2x, a)') "Output and Plotting Options:"
-        msg = "S  - Save Flight coefficients to output file"
-        call DisplayMessageWithTextDefault(msg, pf%FileName, 4)
-
+        write(6, '(2x, a)') "Plotting Options:"
         write(6, '(4x, a)') "PP - Plot Planform in ES-Plot"
         write(6, '(4x, a)') "PW - Plot Dimensionless Washout Distribution in ES-Plot"
         write(6, '(4x, a)') "PL - Plot Section Lift Distribution in ES-Plot"
@@ -177,6 +176,9 @@ contains
 
         ! Main Execution commands
         write(6, *)
+        msg = "S  - Save Flight coefficients to output file"
+        call DisplayMessageWithTextDefault(msg, pf%FileName, 2)
+
         write(6, '(2x, a)') "B - Back to Planform Parameters"
         write(6, '(2x, a)') "Q - Quit"
 
@@ -261,9 +263,6 @@ contains
             call EditRollingRate(pf)
 
         ! Output and Plotting options
-        else if (input == 'S') then
-            call OutputFlightConditions(pf)
-            call system('pause')
         else if (input == 'PP') then
             call PlotPlanform(pf)
         else if (input == 'PW') then
@@ -272,6 +271,8 @@ contains
             call PlotSectionLiftDistribution(pf)
         else if (input == 'PN') then
             call PlotNormalizedLiftCoefficient(pf)
+        else if (input == 'S') then
+            call OutputFlightConditions(pf)
         end if
 
         call ComputeFlightConditions(pf)

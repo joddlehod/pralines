@@ -61,10 +61,6 @@ contains
     subroutine OutputFlightConditions(pf)
         type(Planform), intent(in) :: pf
 
-        ! Output flight conditions to console window
-        call OutputOperatingConditions(6, pf)
-        call OutputFlightCoefficients(6, pf)
-
         ! Open the file and append flight conditions to end
         open(unit=10, file=pf%FileName, access="append")
 

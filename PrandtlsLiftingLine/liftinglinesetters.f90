@@ -303,7 +303,7 @@ contains
             oldOmega = pf%Washout
             cont = .true.
             i = 0
-            do while (cont .and. i < 1000)
+            do while (i < 100 .or. (cont .and. i < 1000))
                 i = i + 1
                 newOmega = OptimumWashout1(pf%KDL, oldCL, pf%KDW, pf%CLa)
                 newCL = CL1(pf%CLa, pf%AngleOfAttack, pf%EW, newOmega)
