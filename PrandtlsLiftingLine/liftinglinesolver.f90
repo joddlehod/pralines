@@ -103,12 +103,7 @@ contains
         nnodes = pf%NNodes
         do i = 1, nnodes
             zbi = z_over_b_i(i, nnodes)
-            if (Compare(dabs(zbi), pf%AileronRoot, zero) /= -1 .and. &
-                & Compare(dabs(zbi), pf%AileronTip, zero) /= 1) then
-                chi(i) = -sign(FlapEffectiveness(pf, i), zbi)
-            else
-                chi(i) = 0.0d0
-            end if
+            chi(i) = -sign(FlapEffectiveness(pf, i), zbi)
         end do
 
         if (pf%WingType == Tapered .and. Compare(pf%TaperRatio, 0.0d0, zero) == 0) then

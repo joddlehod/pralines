@@ -222,7 +222,15 @@ module class_Planform
             type(Planform), intent(in) :: pf
             integer, intent(in) :: i
 
-            cfc = 0.75d0 - y_i(pf, i) / c_over_b_i(pf, i)
+            real*8 :: zbi
+
+            zbi = z_over_b_i(i, pf%NNodes)
+            if (Compare(dabs(zbi), pf%AileronRoot, zero) == -1 .or. &
+                & Compare(dabs(zbi), pf%AileronTip, zero) == 1) then
+                cfc = 0.0d0
+            else
+                cfc = 0.75d0 - y_i(pf, i) / c_over_b_i(pf, i)
+            end if
         end function cf_over_c_i
 
         real*8 function y_i(pf, i) result(y)

@@ -170,8 +170,10 @@ contains
         msg = "S  - Save Flight coefficients to output file"
         call DisplayMessageWithTextDefault(msg, pf%FileName, 4)
 
-        write(6, '(4x, a)') "PP  - Plot Planform in ES-Plot"
-        write(6, '(4x, a)') "PW  - Plot Dimensionless Washout Distribution in ES-Plot"
+        write(6, '(4x, a)') "PP - Plot Planform in ES-Plot"
+        write(6, '(4x, a)') "PW - Plot Dimensionless Washout Distribution in ES-Plot"
+        write(6, '(4x, a)') "PL - Plot Section Lift Distribution in ES-Plot"
+        write(6, '(4x, a)') "PN - Plot Normalized Section Lift Coefficient in ES-Plot"
 
         ! Main Execution commands
         write(6, *)
@@ -266,6 +268,10 @@ contains
             call PlotPlanform(pf)
         else if (input == 'PW') then
             call PlotWashout(pf)
+        else if (input == 'PL') then
+            call PlotSectionLiftDistribution(pf)
+        else if (input == 'PN') then
+            call PlotNormalizedLiftCoefficient(pf)
         end if
 
         call ComputeFlightConditions(pf)

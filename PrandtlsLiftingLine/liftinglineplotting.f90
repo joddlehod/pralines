@@ -66,17 +66,78 @@ contains
         integer :: i
 
         open(unit=11, file='washout.dat')
-        write(11, '(a)') "Dimensionless Washout Distribution"
+        write(11, '(a)') "$ Dimensionless Washout Distribution"
 
         ! Write washout distribution
-        do i=1, pf%NNodes
+        do i = 1, pf%NNodes
             write(11, '(f22.15, a, 2x, f22.15)') &
                 & z_over_b_i(i, pf%NNodes), ";", pf%Omega(i)
         end do
 
         close(unit=11)
 
-        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" washout.dat')
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" washout.dat washout.qtp')
     end subroutine PlotWashout
+
+    subroutine PlotSectionLiftDistribution(pf)
+        type(Planform), intent(in) :: pf
+
+        integer :: i
+        real*8 :: zb, cl(pf%NNodes)
+
+        call GetLiftDistribution(pf, cl)
+
+        open(unit=11, file='liftdistribution.dat')
+        write(11, '(a)') "$ Section Lift Distribution"
+
+        do i = 1, pf%NNodes
+            zb = z_over_b_i(i, pf%NNodes)
+            write(11, '(f22.15, a, 2x, f22.15)') zb, ";", cl(i)
+        end do
+
+        close(unit=11)
+
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" liftdistribution.dat liftdistribution.qtp')
+    end subroutine PlotSectionLiftDistribution
+
+    subroutine PlotNormalizedLiftCoefficient(pf)
+        type(Planform), intent(in) :: pf
+
+        integer :: i
+        real*8 :: zb, cb, cl(pf%NNodes)
+
+        call GetLiftDistribution(pf, cl)
+
+        open(unit=11, file='liftcoefficient.dat')
+        write(11, '(a)') "$ Normalized Section Lift Coefficient"
+
+        do i = 1, pf%NNodes
+            zb = z_over_b_i(i, pf%NNodes)
+            cb = c_over_b_zb(pf, zb)
+            write(11, '(f22.15, a, 2x, f22.15)') zb, ";", cl(i) / cb / pf%CL1
+        end do
+
+        close(unit=11)
+
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" liftcoefficient.dat liftcoefficient.qtp')
+    end subroutine PlotNormalizedLiftCoefficient
+
+    subroutine GetLiftDistribution(pf, cl)
+        type(Planform), intent(in) :: pf
+        real*8, intent(out) :: cl(pf%NNodes)
+
+        integer :: i, j
+        real*8 :: zb, theta
+
+        do i = 1, pf%NNodes
+            zb = z_over_b_i(i, pf%NNodes)
+            theta = theta_zb(zb)
+            cl(i) = 0.0d0
+            do j = 1, pf%NNodes
+                cl(i) = cl(i) + pf%BigA(j) * sin(real(j, 8) * theta)
+            end do
+            cl(i) = cl(i) * 4.0d0
+        end do
+    end subroutine GetLiftDistribution
 
 end module LiftingLinePlotting
