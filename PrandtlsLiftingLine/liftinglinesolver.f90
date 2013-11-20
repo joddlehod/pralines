@@ -15,11 +15,11 @@ contains
         write(6, *)
 
         if (.not. pf%IsAllocated) then
-            call AllocateArrays(pf)
-
             if (pf%WingType == Combination) then
                 call SetCombinationWingCoefficients(pf)
             end if
+
+            call AllocateArrays(pf)
 
             call ComputeC(pf, pf%BigC)
             call ComputeCInverse(pf, pf%BigC_Inv)
@@ -364,7 +364,7 @@ contains
         integer :: j
         integer :: jsq
         integer :: nnode
-        real*8 :: cb1
+        real*8 :: cb0
 
         nnode = pf%NNodes
         do j = 1, nnode
@@ -373,8 +373,8 @@ contains
             c(nnode, j) = real((-1)**(j + 1) * jsq, 8)
         end do
 
-        cb1 = c_over_b_i(pf, 1)
-        if (dabs(cb1) < 1.0d-10) then
+        cb0 = c_over_b(pf, pi)
+        if (dabs(cb0) < 1.0d-10) then
             call C1j_Nj_zero_chord(c, pf)
         end if
 
@@ -422,10 +422,12 @@ contains
         else if (pf%WingType == Combination) then
             ! TODO: Add code for combination wing type
             do j = 1, pf%NNodes
-                c(1, j) = c(1, j) + real(j, 8) * pi * &
-                    & pf%AspectRatio / pf%SectionLiftSlope
-                c(n, j) = c(n, j) + real((-1)**(j + 1) * j, 8) * pi * &
-                    & pf%AspectRatio / pf%SectionLiftSlope
+                c(1, j) = c(1, j) + 4.0d0 * real(j, 8) * &
+                    & sqrt(1.0d0 - 2.0d0 * pf%C4) / &
+                    & (pf%C3 * pf%C5 * pf%SectionLiftSlope)
+                c(n, j) = c(n, j) + 4.0d0 * real((-1)**(j + 1) * j, 8) * &
+                    & sqrt(1.0d0 - 2.0d0 * pf%C4) / &
+                    & (pf%C3 * pf%C5 * pf%SectionLiftSlope)
             end do
         else
             stop "*** Unknown Wing Type ***"

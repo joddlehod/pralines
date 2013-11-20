@@ -22,7 +22,7 @@ module class_Planform
         real*8 :: AspectRatio = 5.56d0 ! Aspect ratio
         real*8 :: TaperRatio = 1.0d0 ! Taper ratio (tapered wing only)
         real*8 :: TransitionPoint = 0.25d0 ! Transition point (Combination wing only)
-        real*8 :: TransitionChord = 0.5d0 ! c/croot at transtion point (Combination wing only)
+        real*8 :: TransitionChord = 1.0d0 ! c/croot at transtion point (Combination wing only)
         real*8 :: SectionLiftSlope = 2.0d0 * pi ! Section lift slope
         real*8 :: AileronRoot = 0.253d0 ! Location of aileron root (z/b)
         real*8 :: AileronTip = 0.438d0 ! Location of aileron tip (z/b)

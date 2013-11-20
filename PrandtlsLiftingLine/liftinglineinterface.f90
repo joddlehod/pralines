@@ -50,7 +50,7 @@ contains
         call DisplayMessageWithTextDefault(msg, GetWingType(pf), 4)
 
         if (pf%WingType == Combination) then
-            msg = "TP - Edit z/b at the transition from tapered to elliptic"
+            msg = "TZ - Edit z/b at the transition from tapered to elliptic"
             call DisplayMessageWithRealDefault(msg, pf%TransitionPoint, 4)
 
             msg = "TC - Edit c/croot at the transition from tapered to elliptic"
@@ -192,11 +192,11 @@ contains
         ! Wing parameters
         if (input == 'WT') then
             call EditWingType(pf)
-        else if (input == 'TP') then
+        else if (input == 'TZ' .and. pf%WingType == Combination) then
             call EditTransitionPoint(pf)
-        else if (input == 'TC') then
+        else if (input == 'TC' .and. pf%WingType == Combination) then
             call EditTransitionChord(pf)
-        else if (input == 'WD') then
+        else if (input == 'WD' .and. pf%WingType /= Elliptic) then
             call EditWashoutDistribution(pf)
         else if (input == 'N') then
             call EditNNodes(pf)
@@ -329,7 +329,7 @@ contains
 
         msg = "Enter c/croot at the transition point from tapered to elliptic"
         call DisplayMessageWithRealDefault(msg, pf%TransitionChord, 0)
-        call SetTransitionChord(pf, GetRealInput(0.0d0, 2.0d0, pf%TransitionChord))
+        call SetTransitionChord(pf, GetRealInput(0.0d0, 10.0d0, pf%TransitionChord))
 
         isValid = AreCombinationWingCoefficientsValid(pf)
         do while(.not. isValid)

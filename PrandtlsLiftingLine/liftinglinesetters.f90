@@ -68,18 +68,13 @@ contains
 
         pf%C1 = pf%TransitionPoint
         pf%C2 = (1.0d0 - pf%TransitionChord) / pf%C1
-        pf%C4 = (pf%C1 - 2.0d0 * pf%C1**2 * pf%C2 + 0.25d0 * pf%C2) / &
-            & (pf%C1 * pf%C2 - pf%C2 + 1.0d0)
+        pf%C4 = (pf%C1 - 0.25d0 * pf%C2) / (pf%C1 * pf%C2 - pf%C2 + 1.0d0)
         u = (pf%C1 - pf%C4) / (0.5d0 - pf%C4)
         asin_u = asin(u)
         pf%C3 = (1.0d0 - pf%C1 * pf%C2) / sqrt(1.0d0 - u**2)
         pf%C5 = 1.0d0 / (pf%AspectRatio * (2.0d0 * pf%C1 - pf%C1**2 * pf%C2 + &
             & 0.5d0 * pf%C3 * (0.5d0 - pf%C4) * (pi - 2.0d0 * asin_u - &
             & sin(2.0d0 * asin_u))))
-        !pf%C5 = 1.0d0 / (2.0d0 * pf%AspectRatio * &
-        !    & (pf%C1 - 0.5d0 * pf%C1**2 * pf%C2 + &
-        !    & 0.25d0 * pf%C3 * (0.5d0 - pf%C4) * &
-        !    & (0.5d0 * pi - sin(2.0d0 * asin_u) - asin_u)))
 
         if (pf%ParallelHingeLine) then
             call SetParallelHingeLine(pf)
@@ -89,19 +84,22 @@ contains
     logical function AreCombinationWingCoefficientsValid(pf) result(isValid)
         type(Planform), intent(in) :: pf
 
-        real*8 :: u
+        real*8 :: u, d1, d2
 
         u = (pf%C1 - pf%C4) / (0.5d0 - pf%C4)
+        d1 = -pf%C2
+        d2 = -(pf%C3 * u) / (sqrt(1.0d0 - u**2) * (0.5d0 - pf%C4))
 
-        if (Compare(pf%C1, 0.0d0, zero) == 0) then
+        if (Compare(pf%C1, 0.0d0, zero) /= 1 .and. &
+            & Compare(pf%C1, 0.5d0, zero) /= -1) then
             isValid = .false.
         else if (Compare(pf%C1 * pf%C2 - pf%C2 + 1.0d0, 0.0d0, zero) == 0) then
             isValid = .false.
         else if (Compare(pf%C4, 0.5d0, zero) == 0) then
             isValid = .false.
-        else if (Compare(u, 0.0d0, zero) /= 1) then
+        else if (Compare(dabs(u), 1.0d0, zero) /= -1) then
             isValid = .false.
-        else if (Compare(u, 1.0d0, zero) /= -1) then
+        else if (Compare(d1, d2, zero) /= 0) then
             isValid = .false.
         else
             isValid = .true.
