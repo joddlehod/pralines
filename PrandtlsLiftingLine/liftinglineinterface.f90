@@ -3,7 +3,6 @@ module LiftingLineInterface
     use LiftingLineSetters
     use LiftingLineSolver
     use LiftingLineOutput
-    use LiftingLinePlotting
     use LiftingLineSolver_Test
 
     implicit none
@@ -127,15 +126,18 @@ contains
     character*2 function OperatingConditions(pf) result(inp)
         type(Planform), intent(inout) :: pf
 
+        integer :: i
         character*80 :: msg
 
         ! Clear the screen
         call system('cls')
 
         ! Output the Planform summary
+        write(6, '(80a)') ("*", i=1,80)
         call OutputPlanformSummary(6, pf)
         call OutputOperatingConditions(6, pf)
         call OutputFlightCoefficients(6, pf)
+        write(6, '(80a)') ("*", i=1,80)
         write(6, *)
 
         ! Display options to user
