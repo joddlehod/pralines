@@ -1,10 +1,23 @@
 module LiftingLineOutput
     use Utilities
     use class_Planform
+    use LiftingLineSetters
     use matrix
     implicit none
 
 contains
+    subroutine OutputHeader()
+        integer :: i
+
+        write(6, ('(80a)')) ("*", i=1, 80)
+        write(6, '(34x, a)') "Pralines v1.0"
+        write(6, *)
+        write(6, '(28x, a)') "Author: Josh Hodson"
+        write(6, '(28x, a)') "Release Date: 20 Nov 2013"
+        write(6, *)
+        write(6, ('(80a)')) ("*", i=1, 80)
+    end subroutine OutputHeader
+
     subroutine OutputPlanform(pf)
         type(Planform), intent(in) :: pf
 
@@ -76,20 +89,22 @@ contains
         integer, intent(in) :: u  ! Output unit
         type(Planform), intent(in) :: pf
 
-        write(u, '(a15, 17x, 1x, a1, f20.15, 1x, a)') "Washout (twist)", &
-            & "=", pf%Washout * 180.0d0 / pi, "degrees"
-        write(u, '(a15, 17x, 1x, a1, f20.15, 1x, a)') "Optimum washout", &
+        write(u, '(a15, 19x, 1x, a1, f20.15, 1x, a)') "Optimum washout", &
             & "=", pf%OptimumWashout1 * 180.0d0 / pi, "degrees (Eq. 1.8.37)"
         if (pf%WashoutDistribution == Optimum) then
-            write(u, '(a15, 17x, 1x, a1, f20.15, 1x, a)') "Optimum washout", &
+            write(u, '(a15, 19x, 1x, a1, f20.15, 1x, a)') "Optimum washout", &
                 & "=", pf%OptimumWashout2 * 180.0d0 / pi, "degrees (Eq. 1.8.42)"
         end if
-        write(u, '(a18, 14x, 1x, a1, f20.15, 1x, a)') &
+        write(u, '(a28, 6x, 1x, a1, f20.15, 1x, a)') "Washout used in calculations", &
+            & "=", pf%Washout * 180.0d0 / pi, "degrees"
+        write(u, '(a18, 16x, 1x, a1, f20.15, 1x, a)') &
             & "Aileron deflection", "=", &
             & pf%AileronDeflection * 180.0d0 / pi, "degrees"
-        write(u, '(a26, 6x, 1x, a1, f20.15)') &
-            & "Dimensionless rolling rate", "=", pf%RollingRate
-        write(u, '(a32, 1x, a1, f20.15, 1x, a)') &
+        write(u, '(a33, 1x, 1x, a1, f20.15)') &
+            & "Steady dimensionless rolling rate", "=", SteadyRollingRate(pf)
+        write(u, '(a31, 3x, 1x, a1, f20.15)') &
+            & "Dimensionless rolling rate used", "=", pf%RollingRate
+        write(u, '(a32, 2x, 1x, a1, f20.15, 1x, a)') &
             & "Root aerodynamic angle of attack", "=", &
             & pf%AngleOfAttack * 180.0d0 / pi, "degrees"
         write(u, *)
@@ -122,16 +137,41 @@ contains
             & len_nnodes, ", 1x, a, i", len_nnodes, ",a)"
 
         write(u, '(a)') "Planform Summary:"
-        write(u, '(2x, a9, 17x, 1x, a1, 3x, a)') "Wing type", "=", GetWingType(pf)
+
+        ! Wing type
+        write(u, '(2x, a9, 17x, 1x, a1, 3x, a)') "Wing type", "=", &
+            & trim(GetWingType(pf))
+
+        ! Number of nodes
         write(u, fmt_str) "Number of nodes", "=", pf%NNodes, " (", &
             & (pf%NNodes + 1) / 2, " nodes per semispan)"
+
+        ! Section Lift Slope
         write(u, '(2x, a26, 1x, a1, f20.15)') &
             & "Airfoil section lift slope", "=", pf%SectionLiftSlope
+
+        ! Aspect Ratio
         write(u, '(2x, a12, 14x, 1x, a1, f20.15)') &
             & "Aspect Ratio", "=", pf%AspectRatio
+
+        ! Taper Ratio
         if (pf%WingType == Tapered) then
             write(u, '(2x, a11, 15x, 1x, a1, f20.15)') &
                 & "Taper Ratio", "=", pf%TaperRatio
+        end if
+
+        ! Transition from tapered to elliptic
+        if (pf%WingType == Combination) then
+            write(u, '(2x, a20, 6x, 1x, a1, f20.15)') "Transition Point z/b", &
+                & "=", pf%TransitionPoint
+            write(u, '(2x, a20, 6x, 1x, a1, f20.15)') "Transition Point c/croot", &
+                & "=", pf%TransitionChord
+        end if
+
+        ! Washout distribution type
+        if (pf%WingType /= Elliptic) then
+            write(u, '(2x, a20, 6x, 1x, a1, 3x, a)') "Washout Distribution", &
+                & "=", trim(GetWashoutDistributionType(pf))
         end if
 
         ! Location of aileron root, tip
@@ -311,7 +351,14 @@ contains
         type(Planform), intent(in) :: pf
 
         integer :: i
-        real*8 :: zb, cb, cl(pf%NNodes)
+        real*8 :: zb, cb, cl1, cl_over_cl, cl(pf%NNodes)
+
+        ! Don't normalize if CL1 == 0
+        if (Compare(pf%CL1, 0.0d0, zero) == 0) then
+            cl1 = 1.0d0
+        else
+            cl1 = pf%CL1
+        end if
 
         call GetLiftDistribution(pf, cl)
 
@@ -321,7 +368,25 @@ contains
         do i = 1, pf%NNodes
             zb = z_over_b_i(i, pf%NNodes)
             cb = c_over_b_zb(pf, zb)
-            write(11, '(f22.15, a, 2x, f22.15)') zb, ";", cl(i) / cb / pf%CL1
+            if (Compare(cb, 0.0d0, zero) == 0) then
+                if (Compare(cl(i), 0.0d0, zero) == 0) then
+                    if (pf%WingType == Elliptic) then
+                        cl_over_cl = NLC_ZeroChord_Elliptic(pf, zb, cb, cl1)
+                    else if (pf%WingType == Tapered) then
+                        cl_over_cl = NLC_ZeroChord_Tapered(pf, zb, cb, cl1)
+                    else if (pf%WingType == Combination) then
+                        cl_over_cl = NLC_ZeroChord_Tapered(pf, zb, cb, cl1)
+                    else
+                        stop "***Unknown Wing Type***"
+                    end if
+                else
+                    ! Finite lift from zero-chord section, should never happen
+                    cl_over_cl = 1.0d0 / zero
+                end if
+            else
+                cl_over_cl = cl(i) / cb / pf%CL1
+            end if
+            write(11, '(f22.15, a, 2x, f22.15)') zb, ";", cl_over_cl
         end do
 
         close(unit=11)
@@ -346,4 +411,45 @@ contains
             cl(i) = cl(i) * 4.0d0
         end do
     end subroutine GetLiftDistribution
+
+    real*8 function NLC_ZeroChord_Elliptic(pf, zb, cb, cl) result(cl_over_cl)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: zb
+        real*8, intent(in) :: cb
+        real*8, intent(in) :: cl
+
+        integer :: i
+        real*8 :: theta
+
+        theta = theta_zb(zb)
+        cl_over_cl = 0.0d0
+        do i = 1, pf%NNodes
+            cl_over_cl = cl_over_cl + real(i, 8) * pf%BigA(i) * &
+                & cos(real(i, 8) * theta) / cos(theta)
+        end do
+        cl_over_cl = cl_over_cl * pi * pf%AspectRatio / cl
+    end function NLC_ZeroChord_Elliptic
+
+    real*8 function NLC_ZeroChord_Tapered(pf, zb, cb, cl) result(cl_over_cl)
+        type(Planform), intent(in) :: pf
+        real*8, intent(in) :: zb
+        real*8, intent(in) :: cb
+        real*8, intent(in) :: cl
+
+        integer :: i
+        real*8 :: theta, cb2
+
+        theta = theta_zb(zb)
+        if (Compare(theta, 0.0d0, zero) == 0) then
+            theta = zero
+        else
+            theta = pi - zero
+        end if
+        cb2 = c_over_b(pf, theta)
+        cl_over_cl = 0.0d0
+        do i = 1, pf%NNodes
+            cl_over_cl = cl_over_cl + pf%BigA(i) * sin(real(i, 8) * theta)
+        end do
+        cl_over_cl = 4.0d0 * cl_over_cl / cb2 / cl
+    end function NLC_ZeroChord_Tapered
 end module LiftingLineOutput

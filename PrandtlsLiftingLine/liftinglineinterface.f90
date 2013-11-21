@@ -36,30 +36,21 @@ contains
 
         character*80 :: msg
 
-        ! Clear the screen
+        ! Clear the screen and output the header
         call system('cls')
+        call OutputHeader()
 
         ! Display options to user
+        write(6, '(28x, a)') "Planform Design Menu"
+        write(6, *)
         write(6, '(a)') "Select from the following menu options:"
+        write(6, *)
 
         ! Wing parameters
         write(6, '(2x, a)') "Wing Parameters:"
 
         msg = "WT - Edit wing type"
         call DisplayMessageWithTextDefault(msg, GetWingType(pf), 4)
-
-        if (pf%WingType == Combination) then
-            msg = "TZ - Edit z/b at the transition from tapered to elliptic"
-            call DisplayMessageWithRealDefault(msg, pf%TransitionPoint, 4)
-
-            msg = "TC - Edit c/croot at the transition from tapered to elliptic"
-            call DisplayMessageWithRealDefault(msg, pf%TransitionChord, 4)
-        end if
-
-        if (pf%WingType /= Elliptic) then
-            msg = "WD - Toggle washout distribution type"
-            call DisplayMessageWithTextDefault(msg, GetWashoutDistributionType(pf), 4)
-        end if
 
         msg = "N  - Edit number of nodes per semispan"
         call DisplayMessageWithIntegerDefault(msg, (pf%NNodes + 1) / 2, 4)
@@ -74,6 +65,19 @@ contains
 
         msg = "S  - Edit section lift slope"
         call DisplayMessageWithRealDefault(msg, pf%SectionLiftSlope, 4)
+
+        if (pf%WingType == Combination) then
+            msg = "TZ - Edit z/b at the transition from tapered to elliptic"
+            call DisplayMessageWithRealDefault(msg, pf%TransitionPoint, 4)
+
+            msg = "TC - Edit c/croot at the transition from tapered to elliptic"
+            call DisplayMessageWithRealDefault(msg, pf%TransitionChord, 4)
+        end if
+
+        if (pf%WingType /= Elliptic) then
+            msg = "WD - Toggle washout distribution type"
+            call DisplayMessageWithTextDefault(msg, GetWashoutDistributionType(pf), 4)
+        end if
 
         ! Aileron parameters
         write(6, *)
@@ -97,9 +101,6 @@ contains
         msg = "HE - Edit aileron hinge efficiency"
         call DisplayMessageWithRealDefault(msg, pf%HingeEfficiency, 4)
 
-        msg = "DE - Edit aileron deflection efficiency"
-        call DisplayMessageWithRealDefault(msg, pf%DeflectionEfficiency, 4)
-
         ! Output and Plotting options
         write(6, *)
         write(6, '(2x, a)') "Output and Plotting Options:"
@@ -113,7 +114,8 @@ contains
 
         ! Main Execution commands
         write(6, *)
-        write(6, '(2x, a)') "A - Advance to operating conditions menu"
+        write(6, '(2x, a)') "A - Advance to Operating Conditions Menu"
+        write(6, '(2x, a)') "T - Test solver against Problem 1.34b solution"
         write(6, '(2x, a)') "Q - Quit"
 
         write(6, *)
@@ -129,18 +131,19 @@ contains
         integer :: i
         character*80 :: msg
 
-        ! Clear the screen
+        ! Clear the screen and output the header
         call system('cls')
+        call OutputHeader()
 
         ! Output the Planform summary
-        write(6, '(80a)') ("*", i=1,80)
         call OutputPlanformSummary(6, pf)
         call OutputOperatingConditions(6, pf)
         call OutputFlightCoefficients(6, pf)
         write(6, '(80a)') ("*", i=1,80)
-        write(6, *)
 
         ! Display options to user
+        write(6, '(28x, a)') "Operating Conditions Menu"
+        write(6, *)
         write(6, '(a)') "Select from the following menu options:"
 
         ! Operating Conditions
@@ -178,10 +181,10 @@ contains
 
         ! Main Execution commands
         write(6, *)
-        msg = "S  - Save Flight coefficients to output file"
+        msg = "S - Save Flight coefficients to output file"
         call DisplayMessageWithTextDefault(msg, pf%FileName, 2)
 
-        write(6, '(2x, a)') "B - Back to Planform Parameters"
+        write(6, '(2x, a)') "B - Back to Planform Design Menu"
         write(6, '(2x, a)') "Q - Quit"
 
         write(6, *)
@@ -199,12 +202,6 @@ contains
         ! Wing parameters
         if (input == 'WT') then
             call EditWingType(pf)
-        else if (input == 'TZ' .and. pf%WingType == Combination) then
-            call EditTransitionPoint(pf)
-        else if (input == 'TC' .and. pf%WingType == Combination) then
-            call EditTransitionChord(pf)
-        else if (input == 'WD' .and. pf%WingType /= Elliptic) then
-            call EditWashoutDistribution(pf)
         else if (input == 'N') then
             call EditNNodes(pf)
         else if (input == 'RA') then
@@ -213,6 +210,12 @@ contains
             call EditTaperRatio(pf)
         else if (input == 'S') then
             call EditLiftSlope(pf)
+        else if (input == 'TZ' .and. pf%WingType == Combination) then
+            call EditTransitionPoint(pf)
+        else if (input == 'TC' .and. pf%WingType == Combination) then
+            call EditTransitionChord(pf)
+        else if (input == 'WD' .and. pf%WingType /= Elliptic) then
+            call EditWashoutDistribution(pf)
 
         ! Aileron parameters
         else if (input == 'ZR') then
@@ -227,8 +230,6 @@ contains
             call EditFlapFractionTip(pf)
         else if (input == 'HE') then
             call EditHingeEfficiency(pf)
-        else if (input == 'DE') then
-            call EditDeflectionEfficiency(pf)
 
         ! Output options
         else if (input == 'C') then
@@ -283,6 +284,7 @@ contains
     subroutine EditWingType(pf)
         type(Planform), intent(inout) :: pf
 
+        logical :: cont
         character*2 :: inp
 
         write(6, *)
@@ -293,16 +295,24 @@ contains
         write(6, *)
         write(6, '(a)') "Your selection: "
 
-        inp = GetCharacterInput("  ")
-        write(6, *)
+        cont = .true.
+        do while(cont)
+            inp = GetCharacterInput("  ")
+            write(6, *)
 
-        if (inp == "T") then
-            call SetWingType(pf, Tapered)
-        else if (inp == "E") then
-            call SetWingType(pf, Elliptic)
-        else if (inp == "C") then
-            call SetWingType(pf, Combination)
-        end if
+            if (inp == "T") then
+                call SetWingType(pf, Tapered)
+                cont = .false.
+            else if (inp == "E") then
+                call SetWingType(pf, Elliptic)
+                cont = .false.
+            else if (inp == "C") then
+                call SetWingType(pf, Combination)
+                cont = .false.
+            else
+                write(6, '(a)') "Invalid input, please make a selection from the above menu."
+            end if
+        end do
     end subroutine EditWingType
 
     subroutine EditTransitionPoint(pf)
@@ -442,7 +452,7 @@ contains
 
         write(6, *)
         if (pf%ParallelHingeLine) then
-            write(6, '(a)') "NOTE: Aileron hinge is no longer constrained to be parallel with quarter-chord line."
+            write(6, '(a)') "NOTE: Hinge is no longer constrained to be parallel with quarter-chord line."
         end if
 
         msg = "Enter new cf/c at aileron root or press <ENTER> to accept default"

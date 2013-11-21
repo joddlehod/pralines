@@ -136,6 +136,10 @@ contains
         if (Compare(pf%TaperRatio, rt, zero) /= 0) then
             pf%TaperRatio = rt
             call DeallocateArrays(pf)
+
+            if (pf%ParallelHingeLine) then
+                call SetParallelHingeLine(pf)
+            end if
         end if
     end subroutine SetTaperRatio
 
@@ -378,9 +382,9 @@ contains
     end function RootAlpha
 
     real*8 function SteadyRollingRate(pf) result(pbar_steady)
-        type(Planform), intent(inout) :: pf
+        type(Planform), intent(in) :: pf
 
-        ! Calculate steady dimensionless rolling rate
+        ! Calculate steady dimensionless rolling rate (Eq. 1.8.59)
         pbar_steady = -pf%CRM_da / pf%CRM_pbar * pf%AileronDeflection
     end function SteadyRollingRate
 
