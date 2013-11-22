@@ -29,8 +29,8 @@ contains
         type(Planform) :: pf
 
         integer :: badline
-        character*80 :: fname_work = "Problem1p34b_work.txt"
-        character*80 :: fname_results = "Problem1p34b_results.txt"
+        character*80 :: fname_work = ".\Output\Problem1p34b_work.out"
+        character*80 :: fname_results = ".\Results\Problem1p34b_results.out"
 
 		call InitPlanform(pf)
 

@@ -44,7 +44,7 @@ module class_Planform
 
         ! Output Options
         logical :: OutputMatrices = .true.  ! Write C Matrix and Fourier coefficients to output file?
-        character*80 :: FileName = "Planform.out" ! Name of output file
+        character*80 :: FileName = ".\Output\Planform.out" ! Name of output file
 
         ! Operating Conditions
         real*8 :: DesiredAngleOfAttack = pi / 36.0d0 ! Desired root aerodynamic angle of Attack

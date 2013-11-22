@@ -256,7 +256,7 @@ contains
         integer :: i
 
         ! Generate temporary text file for plotting
-        open(unit=11, file='planform.dat')
+        open(unit=11, file='.\Output\planform.dat')
         write(11, '(a)') "$ Planform Geometry"
 
         ! Write data points for planform
@@ -304,7 +304,8 @@ contains
         close(unit=11)
 
         ! System call to plot planform
-        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" planform.dat planform.qtp')
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" ' &
+            & // '.\Output\planform.dat .\Templates\planform.qtp')
     end subroutine PlotPlanform
 
     subroutine PlotWashout(pf)
@@ -312,7 +313,7 @@ contains
 
         integer :: i
 
-        open(unit=11, file='washout.dat')
+        open(unit=11, file='.\Output\washout.dat')
         write(11, '(a)') "$ Dimensionless Washout Distribution"
 
         ! Write washout distribution
@@ -323,7 +324,8 @@ contains
 
         close(unit=11)
 
-        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" washout.dat washout.qtp')
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" ' &
+            & // '.\Output\washout.dat .\Templates\washout.qtp')
     end subroutine PlotWashout
 
     subroutine PlotSectionLiftDistribution(pf)
@@ -334,7 +336,7 @@ contains
 
         call GetLiftDistribution(pf, cl)
 
-        open(unit=11, file='liftdistribution.dat')
+        open(unit=11, file='.\Output\liftdistribution.dat')
         write(11, '(a)') "$ Section Lift Distribution"
 
         do i = 1, pf%NNodes
@@ -344,7 +346,8 @@ contains
 
         close(unit=11)
 
-        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" liftdistribution.dat liftdistribution.qtp')
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" ' &
+            & // '.\Output\liftdistribution.dat .\Templates\liftdistribution.qtp')
     end subroutine PlotSectionLiftDistribution
 
     subroutine PlotNormalizedLiftCoefficient(pf)
@@ -362,7 +365,7 @@ contains
 
         call GetLiftDistribution(pf, cl)
 
-        open(unit=11, file='liftcoefficient.dat')
+        open(unit=11, file='.\Output\liftcoefficient.dat')
         write(11, '(a)') "$ Normalized Section Lift Coefficient"
 
         do i = 1, pf%NNodes
@@ -391,7 +394,8 @@ contains
 
         close(unit=11)
 
-        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" liftcoefficient.dat liftcoefficient.qtp')
+        call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" ' &
+            & // '.\Output\liftcoefficient.dat .\Templates\liftcoefficient.qtp')
     end subroutine PlotNormalizedLiftCoefficient
 
     subroutine GetLiftDistribution(pf, cl)
