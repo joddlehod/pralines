@@ -32,7 +32,7 @@ contains
         real*8, intent(in) :: oldVal
         real*8, intent(in) :: newVal
 
-        res = dabs(oldVal - newVal) / max(dabs(oldVal), dabs(newVal))
+        res = dabs(oldVal - newVal) / max(dabs(oldVal), dabs(newVal), zero)
     end function Residual
 
     integer function CompareFiles(a, b) result(badline)

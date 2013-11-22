@@ -384,7 +384,7 @@ contains
                     cl_over_cl = 1.0d0 / zero
                 end if
             else
-                cl_over_cl = cl(i) / cb / pf%CL1
+                cl_over_cl = cl(i) / cb / cl1
             end if
             write(11, '(f22.15, a, 2x, f22.15)') zb, ";", cl_over_cl
         end do
@@ -439,11 +439,10 @@ contains
         integer :: i
         real*8 :: theta, cb2
 
-        theta = theta_zb(zb)
-        if (Compare(theta, 0.0d0, zero) == 0) then
-            theta = zero
+        if (zb < 0) then
+            theta = 1.0d-5
         else
-            theta = pi - zero
+            theta = pi - 1.0d-5
         end if
         cb2 = c_over_b(pf, theta)
         cl_over_cl = 0.0d0
