@@ -1,0 +1,59 @@
+Planform Summary:
+  Wing type                  =   Elliptic
+  Number of nodes            =   99  (50 nodes per semispan)
+  Airfoil section lift slope =   6.283185307179586
+  Aspect Ratio               =   5.560000000000000
+  z/b at aileron root        =   0.253000000000000
+  z/b at aileron tip         =   0.438000000000000
+  cf/c at aileron root       =   0.280000000000000
+  cf/c at aileron tip        =   0.250000000000000
+  Hinge Efficiency           =   0.850000000000000
+  Deflection Efficiency      =   1.000000000000000
+
+Lift Coefficient Parameters:
+  KL    =   -0.000000000000000
+  CL,a  =    4.620966971946893
+  EW    =    0.424304130856835
+
+Drag Coefficient Parameters:
+  KD    =    0.000000000000000
+  KDL   =   -0.000000000000000
+  KDW   =    0.088934224521291
+  es    =    1.000000000000000
+
+Rolling Moment Coefficient Parameters:
+  Cl,da =   -0.230298562976715
+  Cl,pb =   -0.456779684988474
+
+Optimum washout                    =  -0.000000000000001 degrees (Eq. 1.8.37)
+Washout used in calculations       =   2.000000000000000 degrees
+Aileron deflection                 =   5.000000000000000 degrees
+Steady dimensionless rolling rate  =  -0.043997886931603
+Dimensionless rolling rate used    =  -0.043997886931603
+Root aerodynamic angle of attack   =   7.048152627743041 degrees
+
+Flight Coefficients:
+  CL    =    0.500000000000000 (Eq. 1.8.24)
+  CL    =    0.500000000000000 (Eq. 1.8.5)
+  CDi   =    0.014444967071628 (Eq. 1.8.25)
+  CDi   =    0.014798217233319 (Eq. 1.8.6)
+  CDi   =    0.014798217233319 (Exact)
+  Croll =    0.000000000000000
+  Cyaw  =    0.002595346795979
+
+Optimum washout                    =  -0.000000000000001 degrees (Eq. 1.8.37)
+Washout used in calculations       =   2.000000000000000 degrees
+Aileron deflection                 =   5.000000000000000 degrees
+Steady dimensionless rolling rate  =  -0.043997886931603
+Dimensionless rolling rate used    =  -0.200000000000000
+Root aerodynamic angle of attack   =   7.048152627743041 degrees
+
+Flight Coefficients:
+  CL    =    0.500000000000000 (Eq. 1.8.24)
+  CL    =    0.500000000000000 (Eq. 1.8.5)
+  CDi   =    0.014444967071628 (Eq. 1.8.25)
+  CDi   =    0.024100720631155 (Eq. 1.8.6)
+  CDi   =   -0.004402717794812 (Exact)
+  Croll =    0.071258596064919
+  Cyaw  =    0.006250268463806
+

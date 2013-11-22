@@ -1,0 +1,63 @@
+Planform Summary:
+  Wing type                  =   Tapered
+  Number of nodes            =   99  (50 nodes per semispan)
+  Airfoil section lift slope =   6.283185307179586
+  Aspect Ratio               =   5.560000000000000
+  Taper Ratio                =   0.500000000000000
+  Washout Distribution       =   Optimum
+  z/b at aileron root        =   0.253000000000000
+  z/b at aileron tip         =   0.438000000000000
+  cf/c at aileron root       =   0.373828647925033
+  cf/c at aileron tip        =   0.250000000000000
+  Hinge Efficiency           =   0.850000000000000
+  Deflection Efficiency      =   1.000000000000000
+
+Lift Coefficient Parameters:
+  KL    =    0.012656624734665
+  CL,a  =    4.563212108702364
+  EW    =   -0.065219158642620
+
+Drag Coefficient Parameters:
+  KD    =    0.010492888814473
+  KDL   =    0.030259580066700
+  KDW   =    0.021815779286399
+  es    =    0.989616068622924
+
+Rolling Moment Coefficient Parameters:
+  Cl,da =   -0.239513350217710
+  Cl,pb =   -0.470979956137708
+
+Optimum washout                    =   3.483165718785543 degrees (Eq. 1.8.37)
+Optimum washout                    =   3.483165718785545 degrees (Eq. 1.8.42)
+Washout used in calculations       =   3.483165718785543 degrees
+Aileron deflection                 =   3.000000000000000 degrees
+Steady dimensionless rolling rate  =  -0.026627225910389
+Dimensionless rolling rate used    =  -0.026627225910389
+Root aerodynamic angle of attack   =   4.795238600484883 degrees
+
+Flight Coefficients:
+  CL    =    0.400000000000000 (Eq. 1.8.24)
+  CL    =    0.400000000000000 (Eq. 1.8.5)
+  CDi   =    0.009159996724713 (Eq. 1.8.25)
+  CDi   =    0.009309619640318 (Eq. 1.8.6)
+  CDi   =    0.009309619640318 (Exact)
+  Croll =   -0.000000000000000
+  Cyaw  =    0.001331361295519
+
+Optimum washout                    =   4.353957148481928 degrees (Eq. 1.8.37)
+Optimum washout                    =   4.353957148481931 degrees (Eq. 1.8.42)
+Washout used in calculations       =   4.353957148481928 degrees
+Aileron deflection                 =   3.000000000000000 degrees
+Steady dimensionless rolling rate  =  -0.026627225910389
+Dimensionless rolling rate used    =  -0.026627225910389
+Root aerodynamic angle of attack   =   5.994048250606104 degrees
+
+Flight Coefficients:
+  CL    =    0.500000000000000 (Eq. 1.8.24)
+  CL    =    0.500000000000000 (Eq. 1.8.5)
+  CDi   =    0.014312494882365 (Eq. 1.8.25)
+  CDi   =    0.014462117797969 (Eq. 1.8.6)
+  CDi   =    0.014462117797969 (Exact)
+  Croll =   -0.000000000000000
+  Cyaw  =    0.001664201619399
+
