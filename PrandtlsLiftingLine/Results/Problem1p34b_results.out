@@ -11,13 +11,13 @@ Planform Summary:
   Deflection Efficiency      =   1.000000000000000
 
 Lift Coefficient Parameters:
-  KL    =    0.000000000000001
-  CL,a  =    4.620966971946889
+  KL    =    0.000000000000000
+  CL,a  =    4.620966971946890
   EW    =    0.424386469296226
 
 Drag Coefficient Parameters:
   KD    =    0.000000000000000
-  KDL   =   -0.000000000000000
+  KDL   =    0.000000000000000
   KDW   =    0.088855402152258
   es    =    1.000000000000000
 

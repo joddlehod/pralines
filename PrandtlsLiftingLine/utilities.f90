@@ -177,6 +177,7 @@ contains
             read(5, '(a)', iostat=ios) inp_str
             if (ios == 0 .and. trim(inp_str) /= "") then
                 ios = ParseFormula(trim(inp_str), inp)
+                write(*,*) ios, inp_str, inp
                 if (ios /= 0 .or. inp < mn .or. inp > mx) then
                     write(6, *)
                     write(6, '(a, a, a, a, a, a)') "Invalid input. Please ", &
@@ -194,7 +195,7 @@ contains
     end function GetRealInput
 
     integer function ParseFormula(inp_str, num) result(estat)
-        character*80, intent(in) :: inp_str
+        character(len=*), intent(in) :: inp_str
         real*8, intent(out) :: num
 
         integer :: i, j, n_oper, last_ind, strlen, ios
@@ -248,7 +249,7 @@ contains
         end do
     end function ParseFormula
 
-    character*80 function FormatReal(r, ndigits) result(real_str)
+    recursive character*80 function FormatReal(r, ndigits) result(real_str)
         real*8, intent(in) :: r
         integer, intent(in) :: ndigits
 

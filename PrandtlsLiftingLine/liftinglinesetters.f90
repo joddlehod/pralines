@@ -39,6 +39,16 @@ contains
         end if
     end subroutine SetWashoutDistribution
 
+    subroutine SetLowAspectRatioMethod(pf, lowAspectRatioMethod)
+        type(Planform), intent(inout) :: pf
+        integer, intent(in) :: lowAspectRatioMethod
+
+        if (pf%LowAspectRatioMethod /= lowAspectRatioMethod) then
+            pf%LowAspectRatioMethod = lowAspectRatioMethod
+            call DeallocateArrays(pf)
+        end if
+    end subroutine SetLowAspectRatioMethod
+
     subroutine SetTransitionPoint(pf, tp)
         type(Planform), intent(inout) :: pf
         real*8, intent(in) :: tp

@@ -393,15 +393,36 @@ contains
         real*8 :: theta
         real*8 :: cb
         real*8 :: sin_theta
+        real*8 :: a0, A, r1, r2, r1y
+        real*8 :: n
 
         nnode = pf%NNodes
         theta = theta_i(i, nnode)
         cb = c_over_b_i(pf, i)
         sin_theta = sin(theta)
 
+        a0 = pf%SectionLiftSlope
+        A = pf%AspectRatio
+
+        ! Set the low aspect ratio method parameters
+        if (pf%LowAspectRatioMethod == Hodson) then
+            r1 = a0 * (A / cb * sin_theta)**exp(-8.0 * A)
+            r2 = A * (pi - atan((2.0 * a0) / (pi * A)))
+        else if (pf%LowAspectRatioMethod == ModifiedSlender) then
+            r1 = a0
+            r2 = 0.5 * pi * A
+        else if (pf%LowAspectRatioMethod == Kuchemann) then
+            n = 1.0 - 0.5 * (1.0 + (a0 / (pi * A))**2)**(-0.25)
+            r1 = 2 * n * a0 / (1.0 - pi * n / tan(pi * n))
+            r2 = pi * A / (2.0 * n)
+        else ! Assume Classical
+            r1 = a0
+            r2 = pi * A
+        end if
+
         do j = 1, nnode
-            c(i, j) = (4.0d0 / (pf%SectionLiftSlope * cb) + &
-                & real(j, 8) / sin_theta) * sin(real(j, 8) * theta)
+            c(i, j) = (4.0d0 / (pf%SectionLiftSlope * cb) * (a0 / r1) + &
+                & real(j, 8) / sin_theta * ((pi * A) / r2)) * sin(real(j, 8) * theta)
         end do
     end subroutine Cij
 

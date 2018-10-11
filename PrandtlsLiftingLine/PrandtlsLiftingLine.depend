@@ -1,21 +1,20 @@
 # depslib dependency file v1.0
-1385139987 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\class_planform.f90
+1385139987 source:./prandtlsliftingline/class_planform.f90
 
-1385068958 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\matrix.f90
+1385068958 source:./prandtlsliftingline/matrix.f90
 
-1385141131 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\liftinglineoutput.f90
+1385141131 source:./prandtlsliftingline/liftinglineoutput.f90
 
-1384929844 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\liftinglinesolver.f90
+1384929844 source:./prandtlsliftingline/liftinglinesolver.f90
 
-1385138849 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\liftinglinesolver_test.f90
+1385138849 source:./prandtlsliftingline/liftinglinesolver_test.f90
 
-1385063901 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\liftinglineinterface.f90
+1385063901 source:./prandtlsliftingline/liftinglineinterface.f90
 
-1383633756 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\main.f90
+1383633756 source:./prandtlsliftingline/main.f90
 
-1385020326 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\liftinglinesetters.f90
+1385020326 source:./prandtlsliftingline/liftinglinesetters.f90
 
-1385072368 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\utilities.f90
+1385072368 source:./prandtlsliftingline/utilities.f90
 
-1384967776 source:c:\users\joshhodson\source\repos\prandtlsliftingline\prandtlsliftingline\liftinglineplotting.f90
-
+1384967776 source:./prandtlsliftingline/liftinglineplotting.f90

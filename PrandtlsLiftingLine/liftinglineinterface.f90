@@ -79,6 +79,9 @@ contains
             call DisplayMessageWithTextDefault(msg, GetWashoutDistributionType(pf), 4)
         end if
 
+        msg = "LC - Edit low-aspect-ratio correction method"
+        call DisplayMessageWithTextDefault(msg, GetLowAspectRatioMethod(pf), 4)
+
         ! Aileron parameters
         write(6, *)
         write(6, '(2x, a)') "Aileron Parameters:"
@@ -177,7 +180,9 @@ contains
         write(6, '(4x, a)') "PP - Plot Planform in ES-Plot"
         write(6, '(4x, a)') "PW - Plot Dimensionless Washout Distribution in ES-Plot"
         write(6, '(4x, a)') "PL - Plot Section Lift Distribution in ES-Plot"
+        write(6, '(4x, a)') "WL - Write Section Lift Distribution to 'liftdistribution.dat'"
         write(6, '(4x, a)') "PN - Plot Normalized Section Lift Coefficient in ES-Plot"
+        write(6, '(4x, a)') "WN - Write Normalized Section Lift Coefficient in ES-Plot"
 
         ! Main Execution commands
         write(6, *)
@@ -216,6 +221,8 @@ contains
             call EditTransitionChord(pf)
         else if (input == 'WD' .and. pf%WingType /= Elliptic) then
             call EditWashoutDistribution(pf)
+        else if (input == 'LC') then
+            call EditLowAspectRatioCorrectionMethod(pf)
 
         ! Aileron parameters
         else if (input == 'ZR') then
@@ -272,8 +279,12 @@ contains
             call PlotWashout(pf)
         else if (input == 'PL') then
             call PlotSectionLiftDistribution(pf)
+        else if (input == 'WL') then
+            call WriteSectionLiftDistribution(pf)
         else if (input == 'PN') then
             call PlotNormalizedLiftCoefficient(pf)
+        else if (input == 'WN') then
+            call WriteNormalizedLiftCoefficient(pf)
         else if (input == 'S') then
             call OutputFlightConditions(pf)
         end if
@@ -375,6 +386,44 @@ contains
         end if
     end subroutine EditWashoutDistribution
 
+    subroutine EditLowAspectRatioCorrectionMethod(pf)
+        type(Planform), intent(inout) :: pf
+
+        logical :: cont
+        character*2 :: inp
+
+        write(6, *)
+        write(6, '(a)') "Select from the following low-aspect-ratio correction methods:"
+        write(6, '(2x, a)') "C - Classical Lifting Line Theory (no correction)"
+        write(6, '(2x, a)') "H - Hodson"
+        write(6, '(2x, a)') "M - Modified Slender Wing"
+        write(6, '(2x, a)') "K - Kuchemann"
+        write(6, *)
+        write(6, '(a)') "Your selection: "
+
+        cont = .true.
+        do while(cont)
+            inp = GetCharacterInput("  ")
+            write(6, *)
+
+            if (inp == "C") then
+                call SetLowAspectRatioMethod(pf, Classical)
+                cont = .false.
+            else if (inp == "H") then
+                call SetLowAspectRatioMethod(pf, Hodson)
+                cont = .false.
+            else if (inp == "M") then
+                call SetLowAspectRatioMethod(pf, ModifiedSlender)
+                cont = .false.
+            else if (inp == "K") then
+                call SetLowAspectRatioMethod(pf, Kuchemann)
+                cont = .false.
+            else
+                write(6, '(a)') "Invalid input, please make a selection from the above menu."
+            end if
+        end do
+    end subroutine
+
     subroutine EditNNodes(pf)
         type(Planform), intent(inout) :: pf
 
@@ -397,7 +446,7 @@ contains
         write(6, *)
         msg = "Enter new aspect ratio or press <ENTER> to accept default"
         call DisplayMessageWithRealDefault(msg, pf%AspectRatio, 0)
-        call SetAspectRatio(pf, GetRealInput(1.0d0, 100.0d0, pf%AspectRatio))
+        call SetAspectRatio(pf, GetRealInput(1.0d-12, 100.0d0, pf%AspectRatio))
     end subroutine EditAspectRatio
 
     subroutine EditTaperRatio(pf)

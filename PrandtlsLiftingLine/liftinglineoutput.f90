@@ -22,7 +22,7 @@ contains
         type(Planform), intent(in) :: pf
 
         ! Open a clean file for output
-        open(unit=10, file=pf%FileName)
+        open(unit=10, file=pf%FileName, action='WRITE')
 
         ! Output the planform summary to output file
         call OutputPlanformSummary(10, pf)
@@ -328,7 +328,7 @@ contains
             & // '.\Output\washout.dat .\Templates\washout.qtp')
     end subroutine PlotWashout
 
-    subroutine PlotSectionLiftDistribution(pf)
+    subroutine WriteSectionLiftDistribution(pf)
         type(Planform), intent(in) :: pf
 
         integer :: i
@@ -336,7 +336,7 @@ contains
 
         call GetLiftDistribution(pf, cl)
 
-        open(unit=11, file='.\Output\liftdistribution.dat')
+        open(unit=11, file='liftdistribution.dat')
         write(11, '(a)') "$ Section Lift Distribution"
 
         do i = 1, pf%NNodes
@@ -346,17 +346,23 @@ contains
 
         close(unit=11)
 
+
+    end subroutine
+
+    subroutine PlotSectionLiftDistribution(pf)
+        type(Planform), intent(in) :: pf
+
+        call WriteSectionLiftDistribution(pf)
         call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" ' &
-            & // '.\Output\liftdistribution.dat .\Templates\liftdistribution.qtp')
+            & // 'liftdistribution.dat .\Templates\liftdistribution.qtp')
     end subroutine PlotSectionLiftDistribution
 
-    subroutine PlotNormalizedLiftCoefficient(pf)
+    subroutine WriteNormalizedLiftCoefficient(pf)
         type(Planform), intent(in) :: pf
 
         integer :: i
         real*8 :: zb, cb, cl1, cl_over_cl, cl(pf%NNodes)
-
-        ! Don't normalize if CL1 == 0
+         ! Don't normalize if CL1 == 0
         if (Compare(pf%CL1, 0.0d0, zero) == 0) then
             cl1 = 1.0d0
         else
@@ -365,7 +371,7 @@ contains
 
         call GetLiftDistribution(pf, cl)
 
-        open(unit=11, file='.\Output\liftcoefficient.dat')
+        open(unit=11, file='liftcoefficient.dat')
         write(11, '(a)') "$ Normalized Section Lift Coefficient"
 
         do i = 1, pf%NNodes
@@ -393,9 +399,14 @@ contains
         end do
 
         close(unit=11)
+    end subroutine
 
+    subroutine PlotNormalizedLiftCoefficient(pf)
+        type(Planform), intent(in) :: pf
+
+        call WriteNormalizedLiftCoefficient(pf)
         call system('"C:\Program Files (x86)\ESPlot v1.3c\esplot.exe" ' &
-            & // '.\Output\liftcoefficient.dat .\Templates\liftcoefficient.qtp')
+            & // 'liftcoefficient.dat .\Templates\liftcoefficient.qtp')
     end subroutine PlotNormalizedLiftCoefficient
 
     subroutine GetLiftDistribution(pf, cl)

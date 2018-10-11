@@ -14,6 +14,11 @@ module class_Planform
         enumerator :: Linear = 1, Optimum = 2
     end enum
 
+    ! Supported low-aspect-ratio methods
+    enum, bind(C)
+        enumerator :: Classical = 1, Hodson = 2, ModifiedSlender = 3, Kuchemann = 4
+    end enum
+
     type Planform
         ! Wing Parameters
         integer :: WingType = Tapered ! Wing type
@@ -34,6 +39,7 @@ module class_Planform
         real*8 :: FlapFractionTip = 0.25d0 ! Flap fraction at aileron tip (cf/c)
         real*8 :: HingeEfficiency = 0.85d0 ! Aileron hinge efficiency
         real*8 :: DeflectionEfficiency = 1.0d0 ! Aileron deflection efficiency
+        integer :: LowAspectRatioMethod = Classical ! Low-Aspect-Ratio correction method
 
         ! Coefficients for Tapered wing with elliptic tip
         real*8 :: C1 = 0.0d0 ! Represents transition point
@@ -44,7 +50,7 @@ module class_Planform
 
         ! Output Options
         logical :: OutputMatrices = .true.  ! Write C Matrix and Fourier coefficients to output file?
-        character*80 :: FileName = ".\Output\Planform.out" ! Name of output file
+        character*80 :: FileName = "planform.out" ! Name of output file
 
         ! Operating Conditions
         real*8 :: DesiredAngleOfAttack = pi / 36.0d0 ! Desired root aerodynamic angle of Attack
@@ -124,6 +130,22 @@ module class_Planform
                 name = "Unknown"
             end if
         end function GetWashoutDistributionType
+
+        character*80 function GetLowAspectRatioMethod(pf) result(name)
+            type(Planform), intent(in) :: pf
+
+            if (pf%LowAspectRatioMethod .eq. Classical) then
+                name = "Classical"
+            else if (pf%LowAspectRatioMethod .eq. Hodson) then
+                name = "Hodson"
+            else if (pf%LowAspectRatioMethod .eq. ModifiedSlender) then
+                name = "Modified Slender Wing"
+            else if (pf%LowAspectRatioMethod .eq. Kuchemann) then
+                name = "Kuchemann"
+            else
+                name = "Unknown"
+            end if
+        end function GetLowAspectRatioMethod
 
         real*8 function theta_i(i, nnodes) result(theta)
             integer, intent(in) :: i
